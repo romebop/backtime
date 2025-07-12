@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Build output
+dist
+build
+.plasmo/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE / Editor specific
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store

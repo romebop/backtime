@@ -1,0 +1,5 @@
+packages:
+  # all packages in subdirs of apps - e.g. apps/web
+  - 'apps/*'
+  # all packages in subdirs of packages - e.g. packages/ui
+  - 'packages/*'
