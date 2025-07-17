@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import path from 'path';
 
 const app = express();
@@ -6,11 +6,11 @@ const port = process.env.PORT || 3001;
 
 app.use(express.static(path.join(__dirname, '../../web/dist')));
 
-app.get('/api', (req, res) => {
+app.get('/api', (_req: Request, res: Response) => {
   res.send('Hello from the API!');
 });
 
-app.get('*', (req, res) => {
+app.get('*', (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../../web/dist/index.html'));
 });
 

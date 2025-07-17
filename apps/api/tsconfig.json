@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "CommonJS",
+    "moduleResolution": "node", /* use node for commonjs modules */
+    "noEmit": false, /* allow emit for api build */
+    "allowImportingTsExtensions": false, /* disable for commonjs modules */
+    "esModuleInterop": true /* enable esModuleInterop for default imports */
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
