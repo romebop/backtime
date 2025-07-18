@@ -1,8 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import Auth from './components/Auth';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <h1>Hello from the Web App!</h1>
+    <Auth />
   </React.StrictMode>,
 )
