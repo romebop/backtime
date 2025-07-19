@@ -5,7 +5,7 @@
   "description": "A monorepo for the Backtime application",
   "main": "index.js",
   "scripts": {
-    "dev": "pnpm --filter ./apps/* --parallel run dev",
+    "dev": "pnpm --filter api run dev",
     "build": "pnpm --filter ./apps/* --parallel run build"
   },
   "keywords": [],

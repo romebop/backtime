@@ -4,18 +4,18 @@ const Auth: React.FC = () => {
   useEffect(() => {
     // @ts-ignore
     google.accounts.id.initialize({
-      client_id: "YOUR_GOOGLE_CLIENT_ID", // replace with your actual client id
+      client_id: 'YOUR_GOOGLE_CLIENT_ID', // replace with your actual client id
       callback: handleCredentialResponse,
     });
     // @ts-ignore
     google.accounts.id.renderButton(
-      document.getElementById("google-signin-button"),
-      { theme: "outline", size: "large" }
+      document.getElementById('google-signin-button'),
+      { theme: 'outline', size: 'large' }
     );
   }, []);
 
   const handleCredentialResponse = async (response: any) => {
-    console.log("encoded jwt id token: " + response.credential);
+    console.log('encoded jwt id token: ' + response.credential);
     // send the id token to your backend
     try {
       const res = await fetch('/api/auth/google', {

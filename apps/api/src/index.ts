@@ -3,7 +3,6 @@ import path from 'path';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 
-// these should be environment variables in a real application
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
 const JWT_SECRET = process.env.JWT_SECRET || 'YOUR_JWT_SECRET';
 
@@ -60,7 +59,8 @@ app.get('/api', authenticateToken, (_req: Request, res: Response) => {
   res.send('Hello from the API!');
 });
 
-app.get('*', authenticateToken, (_req: Request, res: Response) => {
+// any other GET requests not handled by previous routes will serve the index.html
+app.get('*', (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../../web/dist/index.html'));
 });
 
