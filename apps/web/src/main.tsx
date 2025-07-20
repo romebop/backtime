@@ -1,7 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import Auth from './components/Auth';
 import styled from 'styled-components';
+
+import Auth from './components/Auth';
 
 const AppWrapper = styled.div`
   display: flex;

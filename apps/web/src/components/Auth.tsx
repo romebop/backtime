@@ -1,7 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import styled from 'styled-components';
+import LoggedInMessage from './LoggedInMessage';
 
 const Auth: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   useEffect(() => {
+    // check if already logged in (e.g., from a previous session)
+    if (localStorage.getItem('jwt')) {
+      setIsLoggedIn(true);
+    }
+
     // @ts-ignore
     google.accounts.id.initialize({
       client_id: 'YOUR_GOOGLE_CLIENT_ID', // replace with your actual client id
@@ -32,7 +41,7 @@ const Auth: React.FC = () => {
         // store the jwt and user info
         localStorage.setItem('jwt', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        // redirect or update ui
+        setIsLoggedIn(true); // Set logged in status to true
       } else {
         console.error('authentication failed:', data);
       }
@@ -43,10 +52,21 @@ const Auth: React.FC = () => {
 
   return (
     <div>
-      <h2>sign in</h2>
-      <div id="google-signin-button"></div>
+      {isLoggedIn ? (
+        <LoggedInMessage />
+      ) : (
+        <Container>
+          <div id="google-signin-button"></div>
+          <pre style={{ marginLeft: '8px' }}>( ´ ▽ ` )ﾉ</pre>
+        </Container>
+      )}
     </div>
   );
 };
+
+const Container = styled.div`
+  display: flex;
+  align-items: center;
+`;
 
 export default Auth;
