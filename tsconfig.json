@@ -27,8 +27,8 @@
     }
   },
   "references": [
-    { "path": "./apps/api" },
-    { "path": "./apps/web" },
+    { "path": "./apps/server" },
+    { "path": "./apps/client" },
     { "path": "./packages/types" }
   ]
 }
