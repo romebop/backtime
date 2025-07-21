@@ -1,37 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
+import { apiFetch } from '../utils/apiFetch';
+
 const Content: React.FC = () => {
   const [data, setData] = useState(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem('jwt');
-      if (!token) {
-        setError('no authentication token found.');
-        return;
-      }
-
       try {
-        const res = await fetch('/data', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error(`request failed with status: ${res.status}`);
-        }
-
-        const jsonData = await res.json();
-        setData(jsonData);
-      } catch (err: any) {
-        setError(err.message);
+        const response = await apiFetch('/data');
+        setData(response);
+      } catch (error) {
+        setErrorMessage((error as Error).message);
       }
-    };
-
-    fetchData();
+    };                                                                         
+    fetchData();       
   }, []);
 
   return (
@@ -40,7 +25,7 @@ const Content: React.FC = () => {
         <p>You are logged in!</p>
         <Emoji>( •̀ᄇ• ́)ﻭ✧</Emoji>
       </Container>
-      {error && <ErrorDisplay>Error: {error}</ErrorDisplay>}
+      {errorMessage && <ErrorDisplay>Error: {errorMessage}</ErrorDisplay>}
       {data && (
         <DataDisplay>
           <h2>fetch from /data:</h2>
@@ -68,7 +53,6 @@ const ErrorDisplay = styled.div`
 
 const DataDisplay = styled.div`
   margin-top: 16px;
-  width: 100%;
   pre {
     background-color: #f4f4f4;
     padding: 16px;

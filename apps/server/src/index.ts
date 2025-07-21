@@ -26,7 +26,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
   const { credential } = req.body;
   
   if (!credential) {
-    return res.status(400).json({ error: 'missing credential' })
+    return res.status(400).json({ message: 'missing credential' })
   }
 
   try {
@@ -38,7 +38,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
 
     const payload = ticket.getPayload();
     if (!payload) {
-      return res.status(401).json({ error: 'no payload from google' });
+      return res.status(401).json({ message: 'no payload from google' });
     }
     const { email, name, picture, sub } = payload;
     const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '1h' });
@@ -46,7 +46,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
 
   } catch (err) {
     console.error('google auth error:', err);
-    res.status(401).json({ error: 'google auth failed' });
+    res.status(401).json({ message: 'google auth failed' });
   }
 });
 
@@ -55,7 +55,7 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
   const authHeader = req.headers.authorization;
   
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'missing or invalid auth header' });
+    return res.status(401).json({ message: 'missing or invalid auth header' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -66,22 +66,22 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
     // req.user = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'invalid or expired JWT' });
+    return res.status(401).json({ message: 'invalid or expired JWT' });
   }
 }
 
 const mongoClient = new MongoClient(MONGODB_URI);
 mongoClient.connect().then(() => {
-  console.log('connected to mongodb!');
+  console.log('successfully connected to mongodb!');
 });
 app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
-    const db = mongoClient.db();
-    const items = await db.collection('items').find({}).toArray();
-    res.json({ message: 'access granted:', items });
+    const db = mongoClient.db('sample_supplies');
+    const sales = await db.collection('sales').find({}).limit(5).toArray();
+    res.json({ sales });
   } catch (err) {
     console.error('error loading data from mongodb:', err);
-    res.status(500).json({ error: 'failed to load data' });
+    res.status(500).json({ message: 'failed to load data' });
   }
 });
 
