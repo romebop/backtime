@@ -35,9 +35,11 @@ const Content: React.FC = () => {
   }, []);
 
   return (
-    <Container>
-      <p>You are logged in!</p>
-      <Emoji>( •̀ᄇ• ́)ﻭ✧</Emoji>
+    <>
+      <Container>
+        <p>You are logged in!</p>
+        <Emoji>( •̀ᄇ• ́)ﻭ✧</Emoji>
+      </Container>
       {error && <ErrorDisplay>Error: {error}</ErrorDisplay>}
       {data && (
         <DataDisplay>
@@ -45,14 +47,13 @@ const Content: React.FC = () => {
           <pre>{JSON.stringify(data, null, 2)}</pre>
         </DataDisplay>
       )}
-    </Container>
+    </>
   );
 };
 
 const Container = styled.div`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 `;
 
 const Emoji = styled.pre`

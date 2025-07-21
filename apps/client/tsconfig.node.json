@@ -8,7 +8,9 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "isolatedModules": true,
-    "types": ["node"]
+    "types": ["node"],
+    "outDir": "./dist-types-node",
+    "emitDeclarationOnly": true
   },
   "include": ["vite.config.ts"]
 }

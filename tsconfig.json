@@ -19,6 +19,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "composite": true,
 
     /* path aliases for monorepo */
     "baseUrl": ".",

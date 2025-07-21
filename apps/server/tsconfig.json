@@ -7,7 +7,8 @@
     "moduleResolution": "node", /* use node for commonjs modules */
     "noEmit": false, /* allow emit for server build */
     "allowImportingTsExtensions": false, /* disable for commonjs modules */
-    "esModuleInterop": true /* enable esModuleInterop for default imports */
+    "esModuleInterop": true, /* enable esModuleInterop for default imports */
+    "composite": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

@@ -72,7 +72,7 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
 
 const mongoClient = new MongoClient(MONGODB_URI);
 mongoClient.connect().then(() => {
-  console.log('connected to mongodb');
+  console.log('connected to mongodb!');
 });
 app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
