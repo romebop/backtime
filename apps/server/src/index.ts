@@ -4,19 +4,21 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
+import { MongoClient } from 'mongodb';
 
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+if (!GOOGLE_CLIENT_ID) throw new Error('missing env var: GOOGLE_CLIENT_ID');
 const JWT_SECRET = process.env.JWT_SECRET!;
-if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
-  throw new Error('missing env vars: GOOGLE_CLIENT_ID or JWT_SECRET');
-}
+if (!JWT_SECRET) throw new Error('missing env var: GOOGLE_CLIENT_ID or JWT_SECRET');
+const MONGODB_URI = process.env.MONGODB_URI!;
+if (!MONGODB_URI) throw new Error('missing env var: MONGODB_URI');
+
 
 const app = express();
 app.use(express.json());
 const clientBuildPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientBuildPath));
-
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 app.post('/auth/google', async (req: Request, res: Response) => {
@@ -68,10 +70,19 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
   }
 }
 
-// sample protected route
-app.get('/protected', authenticateJWT, (_req: Request, res: Response) => {
-  // res.json({ message: 'access granted', user: req.user });
-  res.json({ message: 'access granted' });
+const mongoClient = new MongoClient(MONGODB_URI);
+mongoClient.connect().then(() => {
+  console.log('connected to mongodb');
+});
+app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
+  try {
+    const db = mongoClient.db();
+    const items = await db.collection('items').find({}).toArray();
+    res.json({ message: 'access granted:', items });
+  } catch (err) {
+    console.error('error loading data from mongodb:', err);
+    res.status(500).json({ error: 'failed to load data' });
+  }
 });
 
 app.get('*', (_req: Request, res: Response) => {

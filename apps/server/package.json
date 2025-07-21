@@ -8,17 +8,16 @@
   },
   "dependencies": {
     "@backtime/types": "workspace:*",
-    "@prisma/client": "^5.16.2",
     "dotenv": "^17.2.0",
     "express": "^4.19.2",
     "google-auth-library": "^10.1.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.17.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.23",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.14.9",
-    "prisma": "^5.16.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.3"
   }
