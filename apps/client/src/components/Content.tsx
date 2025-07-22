@@ -4,8 +4,17 @@ import styled from 'styled-components';
 import { apiFetch } from '../utils/apiFetch';
 
 const Content: React.FC = () => {
+  const [userData, setUserData] = useState<object | null>(null);
   const [data, setData] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      console.log('hi');
+      setUserData(JSON.parse(storedUser));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,10 +34,14 @@ const Content: React.FC = () => {
         <p>You are logged in!</p>
         <Emoji>( •̀ᄇ• ́)ﻭ✧</Emoji>
       </Container>
+      <DataDisplay>
+        <h3>user data:</h3>
+        <pre>{JSON.stringify(userData, null, 2)}</pre>
+      </DataDisplay>
       {errorMessage && <ErrorDisplay>Error: {errorMessage}</ErrorDisplay>}
       {data && (
         <DataDisplay>
-          <h2>fetch from /data:</h2>
+          <h3>fetch from /data:</h3>
           <pre>{JSON.stringify(data, null, 2)}</pre>
         </DataDisplay>
       )}

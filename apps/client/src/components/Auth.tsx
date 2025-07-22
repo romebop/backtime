@@ -22,9 +22,11 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
       const data = await res.json();
 
       if (res.ok) {
+        
         console.log('auth successful:', data);
         localStorage.setItem('jwt', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+        console.log(JSON.stringify(data.user));
         onLoginSuccess();
       
       } else {

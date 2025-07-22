@@ -77,7 +77,7 @@ mongoClient.connect().then(() => {
 app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
     const db = mongoClient.db('sample_supplies');
-    const sales = await db.collection('sales').find({}).limit(5).toArray();
+    const sales = await db.collection('sales').find({}).limit(1).toArray();
     res.json({ sales });
   } catch (err) {
     console.error('error loading data from mongodb:', err);
