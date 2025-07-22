@@ -3,7 +3,11 @@ import styled from 'styled-components';
 
 import { apiFetch } from '../utils/apiFetch';
 
-const Content: React.FC = () => {
+interface ContentProps {
+  handleLogOut: () => void;
+}
+
+const Content: React.FC<ContentProps> = ({ handleLogOut }) => {
   const [userData, setUserData] = useState<object | null>(null);
   const [data, setData] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -11,7 +15,6 @@ const Content: React.FC = () => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      console.log('hi');
       setUserData(JSON.parse(storedUser));
     }
   }, []);
@@ -28,6 +31,13 @@ const Content: React.FC = () => {
     fetchData();       
   }, []);
 
+  const logout = () => {
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('user');
+    handleLogOut();
+    window.location.href = '/'; 
+  };
+
   return (
     <>
       <Container>
@@ -38,6 +48,7 @@ const Content: React.FC = () => {
         <h3>user data:</h3>
         <pre>{JSON.stringify(userData, null, 2)}</pre>
       </DataDisplay>
+      <button onClick={() => logout()}>Logout</button>
       {errorMessage && <ErrorDisplay>Error: {errorMessage}</ErrorDisplay>}
       {data && (
         <DataDisplay>

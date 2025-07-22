@@ -19,10 +19,14 @@ const App: React.FC = () => {
     setIsLoggedIn(true);
   };
 
+  const handleLogOut = () => {
+    setIsLoggedIn(false);
+  }
+
   return (
     <Wrapper>
       {isLoggedIn
-        ? <Content />
+        ? <Content handleLogOut={handleLogOut} />
         : <Auth onLoginSuccess={handleLoginSuccess} />}
     </Wrapper>
   );
