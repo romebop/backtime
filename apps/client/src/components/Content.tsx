@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
+import LoadingDots from './LoadingDots';
 import { apiFetch } from '../utils/apiFetch';
 
 interface ContentProps {
@@ -11,6 +12,7 @@ const Content: React.FC<ContentProps> = ({ handleLogOut }) => {
   const [userData, setUserData] = useState<object | null>(null);
   const [data, setData] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -26,6 +28,8 @@ const Content: React.FC<ContentProps> = ({ handleLogOut }) => {
         setData(response);
       } catch (error) {
         setErrorMessage((error as Error).message);
+      } finally {
+        setIsLoading(false);
       }
     };                                                                         
     fetchData();       
@@ -49,13 +53,17 @@ const Content: React.FC<ContentProps> = ({ handleLogOut }) => {
         <pre>{JSON.stringify(userData, null, 2)}</pre>
       </DataDisplay>
       <button onClick={() => logout()}>Logout</button>
-      {errorMessage && <ErrorDisplay>Error: {errorMessage}</ErrorDisplay>}
-      {data && (
-        <DataDisplay>
-          <h3>fetch from /data:</h3>
-          <pre>{JSON.stringify(data, null, 2)}</pre>
-        </DataDisplay>
-      )}
+      {isLoading
+        ? <LoadingDots />
+        : <>
+            {errorMessage && <ErrorDisplay>Error: {errorMessage}</ErrorDisplay>}
+            {data && (
+              <DataDisplay>
+                <h3>fetch from /data:</h3>
+                <pre>{JSON.stringify(data, null, 2)}</pre>
+              </DataDisplay>
+            )}
+          </>}
     </>
   );
 };
