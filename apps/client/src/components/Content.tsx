@@ -2,45 +2,36 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
 import LoadingDots from './LoadingDots';
-import { apiFetch } from '../utils/apiFetch';
+
+import { User } from '../types/User';
 
 interface ContentProps {
-  handleLogOut: () => void;
+  handleLogout: () => void;
+  userData: User | null;
 }
 
-const Content: React.FC<ContentProps> = ({ handleLogOut }) => {
-  const [userData, setUserData] = useState<object | null>(null);
+const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
   const [data, setData] = useState(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUserData(JSON.parse(storedUser));
-    }
-  }, []);
-
-  useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await apiFetch('/data');
-        setData(response);
+        const res = await fetch('/data');
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        const data = await res.json();
+        setData(data);
       } catch (error) {
         setErrorMessage((error as Error).message);
       } finally {
         setIsLoading(false);
       }
-    };                                                                         
-    fetchData();       
+    };
+    fetchData();
   }, []);
-
-  const logout = () => {
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('user');
-    handleLogOut();
-    window.location.href = '/'; 
-  };
 
   return (
     <>
@@ -52,7 +43,7 @@ const Content: React.FC<ContentProps> = ({ handleLogOut }) => {
         <h3>user data:</h3>
         <pre>{JSON.stringify(userData, null, 2)}</pre>
       </DataDisplay>
-      <button onClick={() => logout()}>Logout</button>
+      <button onClick={() => handleLogout()}>Logout</button>
       {isLoading
         ? <LoadingDots />
         : <>

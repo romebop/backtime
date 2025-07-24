@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
+import { User } from '../types/User';
+
 interface AuthProps {
-  onLoginSuccess: () => void;
+  onLogin: (user: User) => void;
 }
 
-const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
+const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   const handleCredentialResponse = async (resp: any) => {
     
@@ -21,21 +23,14 @@ const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
 
       const data = await res.json();
 
-      if (res.ok) {
-        
-        console.log('auth successful:', data);
-        localStorage.setItem('jwt', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        console.log(JSON.stringify(data.user));
-        onLoginSuccess();
-      
-      } else {
-        console.error('auth failed:', data);
+      if (!res.ok) {
+        throw new Error(`HTTP error: ${res.status}`);
       }
+      console.log('auth successful:', JSON.stringify(data.user));
+      onLogin(data.user);
+    
     } catch (error) {
-      
-      console.error('error sending token to backend:', error);
-      
+      console.error('error sending token to backend:', error);      
     }
   };
 

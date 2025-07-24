@@ -1,21 +1,26 @@
 import path from 'path';
 
 import 'dotenv/config';
+import cookieParser from 'cookie-parser';
 import express, { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
 
+console.log('@@@ testing NODE_ENV:');
+console.log(process.env.NODE_ENV)
+
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 if (!GOOGLE_CLIENT_ID) throw new Error('missing env var: GOOGLE_CLIENT_ID');
 const JWT_SECRET = process.env.JWT_SECRET!;
-if (!JWT_SECRET) throw new Error('missing env var: GOOGLE_CLIENT_ID or JWT_SECRET');
+if (!JWT_SECRET) throw new Error('missing env var: JWT_SECRET');
 const MONGODB_URI = process.env.MONGODB_URI!;
 if (!MONGODB_URI) throw new Error('missing env var: MONGODB_URI');
 
 
 const app = express();
+app.use(cookieParser());
 app.use(express.json());
 const clientBuildPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientBuildPath));
@@ -42,7 +47,12 @@ app.post('/auth/google', async (req: Request, res: Response) => {
     }
     const { email, name, picture, sub } = payload;
     const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, user: { id: sub, email, name, picture } });
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production'
+    });
+    res.json({ user: { id: sub, email, name, picture } });
 
   } catch (err) {
     console.error('google auth error:', err);
@@ -50,20 +60,27 @@ app.post('/auth/google', async (req: Request, res: Response) => {
   }
 });
 
-function authenticateJWT(req: Request, res: Response, next: express.NextFunction) {
+app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
+  // @ts-ignore
+  res.json({ user: req.user });
+});
 
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'missing or invalid auth header' });
+app.post('/auth/logout', (_req: Request, res: Response) => {
+  res.clearCookie('token');
+  res.json({ message: 'logged out' });
+});
+
+function authenticateJWT(req: Request, res: Response, next: express.NextFunction) {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(401).json({ message: 'missing token in cookie' });
   }
 
-  const token = authHeader.split(' ')[1];
-
   try {
-    // const decoded = jwt.verify(token, JWT_SECRET);
-    jwt.verify(token, JWT_SECRET);
-    // req.user = decoded;
+    const decoded = jwt.verify(token, JWT_SECRET!)
+    // @ts-ignore
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ message: 'invalid or expired JWT' });

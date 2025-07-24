@@ -5,29 +5,58 @@ import styled from 'styled-components';
 import Auth from './components/Auth';
 import Content from './components/Content';
 
+import { User } from './types/User';
+
 const App: React.FC = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState<User | null>(null);
 
   useEffect(() => {
-    if (localStorage.getItem('jwt')) {
-      setIsLoggedIn(true);
-    }
+    
+    const checkLogin = async () => {
+      try {
+        const res = await fetch('/auth/me');
+        if (!res.ok) {
+          throw new Error(`HTTP error: ${res.status}`);
+        }
+        const data = await res.json();
+        handleLogin(data.user);
+      } catch (error) {
+        console.error('error checking login status:', error);
+        setIsLoggedIn(false);
+        setUserData(null);
+      }
+    };
+    
+    checkLogin();
+
   }, []);
 
-  const handleLoginSuccess = () => {
+  const handleLogin = (user: User) => {
     setIsLoggedIn(true);
+    setUserData(user);
   };
 
-  const handleLogOut = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('error logging out:', error);
+    }
     setIsLoggedIn(false);
+    setUserData(null);
+    window.location.href = '/';
   }
 
   return (
     <Wrapper>
-      {isLoggedIn
-        ? <Content handleLogOut={handleLogOut} />
-        : <Auth onLoginSuccess={handleLoginSuccess} />}
+      {(isLoggedIn && userData)
+        ? <Content
+            handleLogout={handleLogout}
+            userData={userData}
+          />
+        : <Auth onLogin={handleLogin} />}
     </Wrapper>
   );
 };
