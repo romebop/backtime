@@ -7,9 +7,6 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
 
-console.log('@@@ testing NODE_ENV:');
-console.log(process.env.NODE_ENV)
-
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 if (!GOOGLE_CLIENT_ID) throw new Error('missing env var: GOOGLE_CLIENT_ID');
