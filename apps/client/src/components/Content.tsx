@@ -33,6 +33,36 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
     fetchData();
   }, []);
 
+  const handleAuthCodeResponse = async (response: any) => {
+    if (response.code) {
+      try {
+        const res = await fetch('/auth/google-gmail-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: response.code }),
+        });
+        if (!res.ok) {
+          throw new Error(`failed to exchange code: ${res.status}`);
+        }
+        console.log('gmail access granted and tokens exchanged!');
+        // TODO: update UI to reflect Gmail connected status
+      } catch (error) {
+        console.error('error exchanging auth code:', error);
+      }
+    }
+  };
+
+  const handleConnectGmail = () => {
+    // @ts-ignore
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+      ux_mode: 'popup', // or 'redirect'
+      callback: handleAuthCodeResponse,
+    });
+    client.requestCode();
+  };
+
   return (
     <>
       <Container>
@@ -43,6 +73,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
         <h3>user data:</h3>
         <pre>{JSON.stringify(userData, null, 2)}</pre>
       </DataDisplay>
+      <button onClick={handleConnectGmail}>Connect Gmail</button>
       <button onClick={() => handleLogout()}>Logout</button>
       {isLoading
         ? <LoadingDots />
