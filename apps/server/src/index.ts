@@ -32,7 +32,7 @@ app.use(express.json());
 const clientBuildPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientBuildPath));
 
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 app.post('/auth/google', async (req: Request, res: Response) => {
 
   const { credential } = req.body;
@@ -59,7 +59,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production'
     });
-    res.json({ user: { id: sub, email, name, picture } });
+    res.json({ user: { sub, email, name, picture } });
 
   } catch (err) {
     console.error('google auth error:', err);
@@ -68,7 +68,6 @@ app.post('/auth/google', async (req: Request, res: Response) => {
 });
 
 app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
-  // @ts-ignore
   res.json({ user: req.user });
 });
 
@@ -91,14 +90,12 @@ app.post('/auth/google-gmail-code', authenticateJWT, async (req: Request, res: R
 
   try {
     const redirectUri = process.env.NODE_ENV === 'production'
-      ? 'YOUR_PRODUCTION_REDIRECT_URI' // TODO: replace with production redirect URI
+      ? 'PRODUCTION_REDIRECT_URI' // TODO: replace
       : 'http://localhost:5173';
 
     const { tokens } = await googleClient.getToken({
       code,
       redirect_uri: redirectUri,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
     });
 
     if (!tokens.refresh_token) {
@@ -148,7 +145,7 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
     const db = mongoClient.db('sample_supplies');
     const sales = await db.collection('sales').find({}).limit(1).toArray();
-    await new Promise(resolve => setTimeout(resolve, 5000)); // temp
+    await new Promise(resolve => setTimeout(resolve, 5000)); // temp delay 
     res.json({ sales });
   } catch (err) {
     console.error('error loading data from mongodb:', err);
