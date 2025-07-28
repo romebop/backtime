@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 import LoadingDots from './LoadingDots';
 
-import { User } from '../types/User';
+import { User } from '../util/types';
 
 interface ContentProps {
   handleLogout: () => void;

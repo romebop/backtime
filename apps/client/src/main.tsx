@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import Auth from './components/Auth';
 import Content from './components/Content';
 
-import { User } from './types/User';
+import { User } from './util/types';
 
 const App: React.FC = () => {
 

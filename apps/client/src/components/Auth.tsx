@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
-import { User } from '../types/User';
+import { GOOGLE_AUTH_SCOPES } from '../util/constants';
+import { User } from '../util/types';
 
 interface AuthProps {
   onLogin: (user: User) => void;
@@ -42,7 +43,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         window.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           callback: handleCredentialResponse,
-          scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          scope: GOOGLE_AUTH_SCOPES,
         });
         // @ts-ignore
         window.google.accounts.id.renderButton(
