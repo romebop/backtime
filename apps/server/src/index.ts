@@ -34,17 +34,29 @@ app.use(express.static(clientBuildPath));
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 app.post('/auth/google', async (req: Request, res: Response) => {
+  const { code } = req.body;
 
-  const { credential } = req.body;
-  
-  if (!credential) {
-    return res.status(400).json({ message: 'missing credential' })
+  if (!code) {
+    return res.status(400).json({ message: 'missing authorization code' });
   }
 
   try {
+    const redirectUri = process.env.NODE_ENV === 'production'
+      ? 'PRODUCTION_REDIRECT_URI' // TODO: replace
+      : 'http://localhost:5173';
+
+    const { tokens } = await googleClient.getToken({
+      code,
+      redirect_uri: redirectUri,
+    });
+
+    const idToken = tokens.id_token;
+    if (!idToken) {
+      return res.status(401).json({ message: 'no id_token from google' });
+    }
 
     const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
+      idToken: idToken,
       audience: GOOGLE_CLIENT_ID,
     });
 
@@ -52,13 +64,27 @@ app.post('/auth/google', async (req: Request, res: Response) => {
     if (!payload) {
       return res.status(401).json({ message: 'no payload from google' });
     }
+
     const { email, name, picture, sub } = payload;
+
+    if (tokens.refresh_token) {
+      const db = mongoClient.db('backtime');
+      const usersCollection = db.collection('users');
+      await usersCollection.updateOne(
+        { googleId: sub },
+        { $set: { gmailRefreshToken: tokens.refresh_token } },
+        { upsert: true }
+      );
+      console.log('refresh token stored for user:', sub);
+    }
+
     const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '1h' });
 
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production'
     });
+
     res.json({ user: { sub, email, name, picture } });
 
   } catch (err) {
@@ -76,50 +102,7 @@ app.post('/auth/logout', (_req: Request, res: Response) => {
   res.json({ message: 'logged out' });
 });
 
-app.post('/auth/google-gmail-code', authenticateJWT, async (req: Request, res: Response) => {
-  const { code } = req.body;
-  const userId = req.user?.sub; // get user ID from authenticated JWT
 
-  if (!code) {
-    return res.status(400).json({ message: 'missing authorization code' });
-  }
-
-  if (!userId) {
-    return res.status(401).json({ message: 'user not authenticated' });
-  }
-
-  try {
-    const redirectUri = process.env.NODE_ENV === 'production'
-      ? 'PRODUCTION_REDIRECT_URI' // TODO: replace
-      : 'http://localhost:5173';
-
-    const { tokens } = await googleClient.getToken({
-      code,
-      redirect_uri: redirectUri,
-    });
-
-    if (!tokens.refresh_token) {
-      console.warn('no refresh token received. this might happen if access was previously granted.');
-      return res.status(200).json({ message: 'authorization code exchanged successfully, no new refresh token' });
-    }
-
-    const db = mongoClient.db('backtime');
-    const usersCollection = db.collection('users');
-
-    await usersCollection.updateOne(
-      { googleId: userId }, // assuming 'googleId' is the field storing the user's google sub
-      { $set: { gmailRefreshToken: tokens.refresh_token } },
-      { upsert: true } // create user if not existing (though user should exist from initial auth)
-    );
-
-    console.log('Refresh token stored for user:', userId);
-
-    res.status(200).json({ message: 'authorization code exchanged and refresh token stored successfully' });
-  } catch (error) {
-    console.error('error exchanging authorization code or storing token:', error);
-    res.status(500).json({ message: 'failed to exchange authorization code or store token' });
-  }
-});
 
 function authenticateJWT(req: Request, res: Response, next: express.NextFunction) {
   const token = req.cookies.token;

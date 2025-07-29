@@ -5,61 +5,56 @@ import { GOOGLE_AUTH_SCOPES } from '../util/constants';
 import { User } from '../util/types';
 
 interface AuthProps {
-  onLogin: (user: User) => void;
+  handleLogin: (user: User) => void;
 }
 
-const Auth: React.FC<AuthProps> = ({ onLogin }) => {
+const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
 
-  const handleCredentialResponse = async (resp: any) => {
-    
-    console.log('encoded jwt: ' + resp.credential);
-    
+  const handleAuthCodeResponse = async (code: string) => {
     try {
-
       const res = await fetch('/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: resp.credential }),
+        body: JSON.stringify({ code }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(`HTTP error: ${res.status}`);
       }
       console.log('auth successful:', JSON.stringify(data.user));
-      onLogin(data.user);
-    
+      handleLogin(data.user);
     } catch (error) {
-      console.error('error sending token to backend:', error);      
+      console.error('error sending auth code to backend:', error);
     }
   };
 
   useEffect(() => {
     const initGoogle = () => {
-      // @ts-ignore
       if (window.google) {
-        // @ts-ignore
-        window.google.accounts.id.initialize({
+        const codeClient = window.google.accounts.oauth2.initCodeClient({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse,
           scope: GOOGLE_AUTH_SCOPES,
+          callback: (response: any) => {
+            if (response.code) {
+              handleAuthCodeResponse(response.code);
+            }
+          },
         });
-        // @ts-ignore
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button'),
-          { theme: 'outline', size: 'large' }
-        );
+
+        const authButton = document.getElementById('google-signin-button');
+        if (authButton) {
+          authButton.onclick = () => codeClient.requestCode();
+        }
       } else {
         setTimeout(initGoogle, 100);
       }
     };
     initGoogle();
-  }, [handleCredentialResponse]);
+  }, [handleLogin]);
 
   return (
     <Container>
-      <div id="google-signin-button"></div>
+      <button id="google-signin-button">Sign in with Google</button>
       <Emoji>( ´ ▽ ` )ﾉ</Emoji>
     </Container>
   );

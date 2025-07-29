@@ -56,7 +56,7 @@ const App: React.FC = () => {
             handleLogout={handleLogout}
             userData={userData}
           />
-        : <Auth onLogin={handleLogin} />}
+        : <Auth handleLogin={handleLogin} />}
     </Wrapper>
   );
 };
