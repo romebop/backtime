@@ -24,7 +24,7 @@
     /* path aliases for monorepo */
     "baseUrl": ".",
     "paths": {
-      "@backtime/types": ["./packages/types/src"]
+      "@backtime/types": ["./packages/types/dist"]
     }
   },
   "references": [

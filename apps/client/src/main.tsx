@@ -4,13 +4,11 @@ import styled from 'styled-components';
 
 import Auth from './components/Auth';
 import Content from './components/Content';
-
-import { User } from './util/types';
+import { UserData } from '@backtime/types';
 
 const App: React.FC = () => {
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
     
@@ -21,10 +19,9 @@ const App: React.FC = () => {
           throw new Error(`HTTP error: ${res.status}`);
         }
         const data = await res.json();
-        handleLogin(data.user);
+        setUserData(data.user);
       } catch (error) {
         console.error('error checking login status:', error);
-        setIsLoggedIn(false);
         setUserData(null);
       }
     };
@@ -33,30 +30,24 @@ const App: React.FC = () => {
 
   }, []);
 
-  const handleLogin = (user: User) => {
-    setIsLoggedIn(true);
-    setUserData(user);
-  };
-
   const handleLogout = async () => {
     try {
       await fetch('/auth/logout', { method: 'POST' });
     } catch (error) {
       console.error('error logging out:', error);
     }
-    setIsLoggedIn(false);
     setUserData(null);
     window.location.href = '/';
   }
 
   return (
     <Wrapper>
-      {(isLoggedIn && userData)
+      {userData !== null
         ? <Content
             handleLogout={handleLogout}
             userData={userData}
           />
-        : <Auth handleLogin={handleLogin} />}
+        : <Auth handleLogin={setUserData} />}
     </Wrapper>
   );
 };

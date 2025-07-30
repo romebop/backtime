@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
+import { UserData } from '@backtime/types';
 import LoadingDots from './LoadingDots';
 
-import { User } from '../types/User';
 
 interface ContentProps {
   handleLogout: () => void;
-  userData: User | null;
+  userData: UserData | null;
 }
 
 const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {

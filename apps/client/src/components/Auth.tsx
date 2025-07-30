@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
 import { GOOGLE_AUTH_SCOPES } from '../util/constants';
-import { User } from '../util/types';
+import { UserData } from '@backtime/types';
 
 interface AuthProps {
-  handleLogin: (user: User) => void;
+  handleLogin: (userData: UserData) => void;
 }
 
 const Auth: React.FC<AuthProps> = ({ handleLogin }) => {

@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "description": "A monorepo for backtime application",
   "main": "index.js",
-  "scripts": {
+    "scripts": {
     "dev": "pnpm --filter server run dev",
-    "build": "pnpm --filter ./apps/* --parallel run build"
+    "build": "pnpm --filter @backtime/types build && pnpm --filter client --filter server --parallel run build"
   },
   "keywords": [],
   "author": "",
