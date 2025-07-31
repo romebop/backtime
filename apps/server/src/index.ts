@@ -8,12 +8,7 @@ import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
 import { google } from 'googleapis';
 
-interface DecodedUser {
-  sub: string;
-  email: string;
-  name: string;
-  picture: string;
-}
+import { UserData } from '@backtime/types'
 
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
@@ -94,7 +89,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
 });
 
 app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
-  res.json({ user: req.user });
+  res.json({ user: req.userData });
 });
 
 app.post('/auth/logout', (_req: Request, res: Response) => {
@@ -102,9 +97,8 @@ app.post('/auth/logout', (_req: Request, res: Response) => {
   res.json({ message: 'logged out' });
 });
 
-
-
 function authenticateJWT(req: Request, res: Response, next: express.NextFunction) {
+
   const token = req.cookies.token;
 
   if (!token) {
@@ -112,8 +106,8 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as DecodedUser;
-    req.user = decoded;
+    const userData = jwt.verify(token, JWT_SECRET!) as UserData;
+    req.userData = userData;
     next();
   } catch (err) {
     return res.status(401).json({ message: 'invalid or expired JWT' });
@@ -137,7 +131,7 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
 });
 
 app.get('/gmail/messages', authenticateJWT, async (req: Request, res: Response) => {
-  const userId = req.user?.sub;
+  const userId = req.userData?.sub;
 
   if (!userId) {
     return res.status(401).json({ message: 'User not authenticated' });

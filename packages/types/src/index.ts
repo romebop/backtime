@@ -12,3 +12,11 @@ export interface UserData {
   name: string;
   picture: string;
 }
+
+declare global {
+  namespace Express {
+    export interface Request {
+      userData?: UserData;
+    }
+  }
+}

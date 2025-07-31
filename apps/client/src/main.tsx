@@ -19,7 +19,7 @@ const App: React.FC = () => {
           throw new Error(`HTTP error: ${res.status}`);
         }
         const data = await res.json();
-        setUserData(data.user);
+        setUserData(data.userData);
       } catch (error) {
         console.error('error checking login status:', error);
         setUserData(null);
