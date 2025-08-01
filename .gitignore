@@ -3,6 +3,7 @@ pnpm-lock.yaml
 
 dist
 dist-types
+dist-types-node
 build
 *.tsbuildinfo
 
