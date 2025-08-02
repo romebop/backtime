@@ -19,12 +19,13 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(`HTTP error: ${res.status}`);
+        const errorMessage = await res.json();
+        throw new Error(`(${res.status}) ${errorMessage}`);
       }
       console.log('auth successful:', JSON.stringify(data.userData));
       handleLogin(data.userData);
     } catch (error) {
-      console.error('error sending auth code to backend:', error);
+      console.error(error);
     }
   };
 

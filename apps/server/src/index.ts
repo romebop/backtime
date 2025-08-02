@@ -82,8 +82,8 @@ app.post('/auth/google', async (req: Request, res: Response) => {
 
     res.json({ user: { sub, email, name, picture } });
 
-  } catch (err) {
-    console.error('google auth error:', err);
+  } catch (error) {
+    console.error('google auth error:', error);
     res.status(401).json({ message: 'google auth failed' });
   }
 });
@@ -109,7 +109,7 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
     const userData = jwt.verify(token, JWT_SECRET!) as UserData;
     req.userData = userData;
     next();
-  } catch (err) {
+  } catch (error) {
     return res.status(401).json({ message: 'invalid or expired JWT' });
   }
 }
@@ -124,8 +124,8 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
     const sales = await db.collection('sales').find({}).limit(1).toArray();
     await new Promise(resolve => setTimeout(resolve, 5000)); // temp delay 
     res.json({ sales });
-  } catch (err) {
-    console.error('error loading data from mongodb:', err);
+  } catch (error) {
+    console.error('error loading data from mongodb:', error);
     res.status(500).json({ message: 'failed to load data' });
   }
 });

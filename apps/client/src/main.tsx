@@ -11,30 +11,32 @@ const App: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
-    
     const checkLogin = async () => {
       try {
         const res = await fetch('/auth/me');
         if (!res.ok) {
-          throw new Error(`HTTP error: ${res.status}`);
+          const errorMessage = await res.json();
+          throw new Error(`(${res.status}) ${errorMessage}`);
         }
         const data = await res.json();
         setUserData(data.userData);
       } catch (error) {
-        console.error('error checking login status:', error);
+        console.error(error);
         setUserData(null);
       }
     };
-    
     checkLogin();
-
   }, []);
 
   const handleLogout = async () => {
     try {
-      await fetch('/auth/logout', { method: 'POST' });
+      const res = await fetch('/auth/logout', { method: 'POST' });
+      if (!res.ok) {
+        const errorMessage = await res.json();
+        throw new Error(`(${res.status}) ${errorMessage}`);
+      }
     } catch (error) {
-      console.error('error logging out:', error);
+      console.error(error);
     }
     setUserData(null);
     window.location.href = '/';
