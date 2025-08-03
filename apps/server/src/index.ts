@@ -10,6 +10,7 @@ import { google } from 'googleapis';
 
 import { UserData } from '@backtime/types'
 
+// env vars
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 if (!GOOGLE_CLIENT_ID) throw new Error('missing env var: GOOGLE_CLIENT_ID');
@@ -17,6 +18,10 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 if (!JWT_SECRET) throw new Error('missing env var: JWT_SECRET');
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 if (!GOOGLE_CLIENT_SECRET) throw new Error('missing env var: GOOGLE_CLIENT_SECRET');
+const REDIRECT_URI = process.env.NODE_ENV === 'production'
+  ? process.env.REDIRECT_URI_PROD
+  : process.env.REDIRECT_URI_DEV;
+if (!REDIRECT_URI) throw new Error('missing env var: REDIRECT_URI');
 const MONGODB_URI = process.env.MONGODB_URI!;
 if (!MONGODB_URI) throw new Error('missing env var: MONGODB_URI');
 
@@ -36,13 +41,9 @@ app.post('/auth/google', async (req: Request, res: Response) => {
   }
 
   try {
-    const redirectUri = process.env.NODE_ENV === 'production'
-      ? 'PRODUCTION_REDIRECT_URI' // TODO: replace
-      : 'http://localhost:5173';
-
     const { tokens } = await googleClient.getToken({
       code,
-      redirect_uri: redirectUri,
+      redirect_uri: REDIRECT_URI,
     });
 
     const idToken = tokens.id_token;
