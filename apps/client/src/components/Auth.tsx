@@ -19,7 +19,7 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
       });
       const data = await res.json();
       if (!res.ok) {
-        const errorMessage = await res.json();
+        const errorMessage = (await res.json()).message;
         throw new Error(`(${res.status}) ${errorMessage}`);
       }
       console.log('auth successful:', JSON.stringify(data.userData));

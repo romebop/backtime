@@ -15,7 +15,7 @@ const App: React.FC = () => {
       try {
         const res = await fetch('/auth/me');
         if (!res.ok) {
-          const errorMessage = await res.json();
+          const errorMessage = (await res.json()).message;
           throw new Error(`(${res.status}) ${errorMessage}`);
         }
         const data = await res.json();
@@ -32,7 +32,7 @@ const App: React.FC = () => {
     try {
       const res = await fetch('/auth/logout', { method: 'POST' });
       if (!res.ok) {
-        const errorMessage = await res.json();
+        const errorMessage = (await res.json()).message;
         throw new Error(`(${res.status}) ${errorMessage}`);
       }
     } catch (error) {
