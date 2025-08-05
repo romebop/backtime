@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "pnpm --filter server run dev",
     "build": "pnpm --filter @backtime/types build && pnpm --filter client --filter server --parallel run build",
-    "clean": "rm -rf apps/client/dist apps/client/dist-types apps/server/dist packages/types/dist"
+    "clean": "rm -rf apps/client/dist apps/client/dist-types apps/server/dist packages/types/dist && find . -name tsconfig.tsbuildinfo -delete"
   },
   "keywords": [],
   "author": "",
