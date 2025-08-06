@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import styled from 'styled-components';
 
+import { UserData } from '@backtime/types';
 import Auth from './components/Auth';
 import Content from './components/Content';
-import { UserData } from '@backtime/types';
 
 const App: React.FC = () => {
 
@@ -18,8 +18,8 @@ const App: React.FC = () => {
           const errorMessage = (await res.json()).message;
           throw new Error(`(${res.status}) ${errorMessage}`);
         }
-        const data = await res.json();
-        setUserData(data.userData);
+        const userData: UserData = await res.json();
+        setUserData(userData);
       } catch (error) {
         console.error(error);
         setUserData(null);

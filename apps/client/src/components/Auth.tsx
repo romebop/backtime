@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
-import { GOOGLE_AUTH_SCOPES } from '../util/constants';
 import { UserData } from '@backtime/types';
+import { GOOGLE_AUTH_SCOPES } from '../util/constants';
 
 interface AuthProps {
   handleLogin: (userData: UserData) => void;
@@ -17,13 +17,13 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code }),
       });
-      const data = await res.json();
+      const userData: UserData = await res.json();
       if (!res.ok) {
         const errorMessage = (await res.json()).message;
         throw new Error(`(${res.status}) ${errorMessage}`);
       }
-      console.log('auth successful:', JSON.stringify(data.userData));
-      handleLogin(data.userData);
+      console.log('auth successful:', JSON.stringify(userData));
+      handleLogin(userData);
     } catch (error) {
       console.error(error);
     }

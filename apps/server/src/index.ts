@@ -41,6 +41,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
   }
 
   try {
+
     const { tokens } = await googleClient.getToken({
       code,
       redirect_uri: REDIRECT_URI,
@@ -55,13 +56,12 @@ app.post('/auth/google', async (req: Request, res: Response) => {
       idToken: idToken,
       audience: GOOGLE_CLIENT_ID,
     });
-
     const payload = ticket.getPayload();
     if (!payload) {
       return res.status(401).json({ message: 'no payload from google' });
     }
 
-    const { email, name, picture, sub } = payload;
+    const { sub, email, name, picture } = payload;
 
     if (tokens.refresh_token) {
       const db = mongoClient.db('backtime');
@@ -71,7 +71,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
         { $set: { gmailRefreshToken: tokens.refresh_token } },
         { upsert: true }
       );
-      console.log('refresh token stored for user:', sub);
+      console.log('refresh token stored for user:', email);
     }
 
     const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '1h' });
@@ -81,7 +81,7 @@ app.post('/auth/google', async (req: Request, res: Response) => {
       secure: process.env.NODE_ENV === 'production'
     });
 
-    res.json({ user: { sub, email, name, picture } });
+    res.json({ sub, email, name, picture });
 
   } catch (error) {
     console.error('google auth error:', error);
@@ -90,7 +90,8 @@ app.post('/auth/google', async (req: Request, res: Response) => {
 });
 
 app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
-  res.json({ user: req.userData });
+  const { sub, email, name, picture }: UserData = req.userData!;
+  res.json({ sub, email, name, picture });
 });
 
 app.post('/auth/logout', (_req: Request, res: Response) => {
