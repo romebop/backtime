@@ -67,14 +67,14 @@ app.post('/auth/google', async (req: Request, res: Response) => {
       const db = mongoClient.db('backtime');
       const usersCollection = db.collection('users');
       await usersCollection.updateOne(
-        { googleId: sub },
-        { $set: { gmailRefreshToken: tokens.refresh_token } },
+        { sub },
+        { $set: { refreshToken: tokens.refresh_token } },
         { upsert: true }
       );
       console.log('refresh token stored for user:', email);
     }
 
-    const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '10s' });
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -133,23 +133,24 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
 });
 
 app.get('/gmail/messages', authenticateJWT, async (req: Request, res: Response) => {
-  const userId = req.userData?.sub;
 
-  if (!userId) {
-    return res.status(401).json({ message: 'User not authenticated' });
+  const sub = req.userData?.sub;
+  if (!sub) {
+    return res.status(401).json({ message: 'user is not authenticated' });
   }
 
   try {
+
     const db = mongoClient.db('backtime');
     const usersCollection = db.collection('users');
-    const user = await usersCollection.findOne({ googleId: userId });
+    const user = await usersCollection.findOne({ sub });
 
-    if (!user || !user.gmailRefreshToken) {
+    if (!user || !user.refreshToken) {
       return res.status(400).json({ message: 'gmail access not granted for this user' });
     }
 
     googleClient.setCredentials({
-      refresh_token: user.gmailRefreshToken,
+      refresh_token: user.refreshToken,
     });
 
     const { token } = await googleClient.getAccessToken();
@@ -162,6 +163,7 @@ app.get('/gmail/messages', authenticateJWT, async (req: Request, res: Response) 
     const response = await gmail.users.messages.list({ userId: 'me' });
 
     res.json(response.data);
+    
   } catch (error) {
     console.error('error fetching gmail messages:', error);
     res.status(500).json({ message: 'failed to fetch gmail messages' });
