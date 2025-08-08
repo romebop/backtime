@@ -3,6 +3,7 @@ import styled from 'styled-components';
 
 import { UserData } from '@backtime/types';
 import { GOOGLE_AUTH_SCOPES } from '../util/constants';
+import axiosInstance from '../util/axiosInstance';
 
 interface AuthProps {
   handleLogin: (userData: UserData) => void;
@@ -12,16 +13,8 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
 
   const handleAuthCodeResponse = async (code: string) => {
     try {
-      const res = await fetch('/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
-      const userData: UserData = await res.json();
-      if (!res.ok) {
-        const errorMessage = (await res.json()).message;
-        throw new Error(`(${res.status}) ${errorMessage}`);
-      }
+      const response = await axiosInstance.post<UserData>('/auth/google', { code });
+      const userData = response.data;
       console.log('auth successful:', JSON.stringify(userData));
       handleLogin(userData);
     } catch (error) {

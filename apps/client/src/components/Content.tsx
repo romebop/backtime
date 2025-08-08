@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 import { UserData } from '@backtime/types';
 import LoadingDots from './LoadingDots';
-
+import axiosInstance from '../util/axiosInstance';
 
 interface ContentProps {
   handleLogout: () => void;
@@ -15,17 +15,16 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/data');
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status}`);
+        const response = await axiosInstance.get('/data');
+        setData(response.data);
+      } catch (error: any) {
+        if (error.response?.status !== 401) {
+          setErrorMessage(error.message);
         }
-        const data = await res.json();
-        setData(data);
-      } catch (error) {
-        setErrorMessage((error as Error).message);
       } finally {
         setIsLoading(false);
       }

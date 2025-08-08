@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import styled from 'styled-components';
+import axiosInstance from './util/axiosInstance';
 
 import { UserData } from '@backtime/types';
 import Auth from './components/Auth';
@@ -13,15 +14,10 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const res = await fetch('/auth/me');
-        if (!res.ok) {
-          const errorMessage = (await res.json()).message;
-          throw new Error(`(${res.status}) ${errorMessage}`);
-        }
-        const userData: UserData = await res.json();
-        setUserData(userData);
+        const response = await axiosInstance.get<UserData>('/auth/me');
+        setUserData(response.data);
       } catch (error) {
-        console.error(error);
+        console.error('Login check failed:', error);
         setUserData(null);
       }
     };
@@ -30,16 +26,13 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch('/auth/logout', { method: 'POST' });
-      if (!res.ok) {
-        const errorMessage = (await res.json()).message;
-        throw new Error(`(${res.status}) ${errorMessage}`);
-      }
+      await axiosInstance.post('/auth/logout');
     } catch (error) {
-      console.error(error);
+      console.error('Logout failed:', error);
+    } finally {
+      setUserData(null);
+      window.location.href = '/';
     }
-    setUserData(null);
-    window.location.href = '/';
   }
 
   return (
