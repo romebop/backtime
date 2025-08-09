@@ -12,19 +12,16 @@ interface ContentProps {
 
 const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
   const [data, setData] = useState(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axiosInstance.get('/data');
-        setData(response.data);
-      } catch (error: any) {
-        if (error.response?.status !== 401) {
-          setErrorMessage(error.message);
-        }
+        const res = await axiosInstance.get('/data');
+        setData(res.data);
+      } catch (err) {
+        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -45,15 +42,10 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
       <button onClick={() => handleLogout()}>Logout</button>
       {isLoading
         ? <LoadingDots />
-        : <>
-            {errorMessage && <ErrorDisplay>Error: {errorMessage}</ErrorDisplay>}
-            {data && (
-              <DataDisplay>
-                <h3>fetch from /data:</h3>
-                <pre>{JSON.stringify(data, null, 2)}</pre>
-              </DataDisplay>
-            )}
-          </>}
+        : <DataDisplay>
+            <h3>fetch from /data:</h3>
+            <pre>{JSON.stringify(data, null, 2)}</pre>
+          </DataDisplay>}
     </>
   );
 };
@@ -65,12 +57,6 @@ const Container = styled.div`
 
 const Emoji = styled.pre`
   margin-left: 8px;
-`;
-
-const ErrorDisplay = styled.div`
-  margin-top: 16px;
-  color: red;
-  font-family: monospace;
 `;
 
 const DataDisplay = styled.div`

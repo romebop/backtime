@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import styled from 'styled-components';
-import axiosInstance from './util/axiosInstance';
 
 import { UserData } from '@backtime/types';
 import Auth from './components/Auth';
 import Content from './components/Content';
+import axiosInstance from './util/axiosInstance';
 
 const App: React.FC = () => {
 
@@ -14,10 +14,10 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const response = await axiosInstance.get<UserData>('/auth/me');
-        setUserData(response.data);
-      } catch (error) {
-        console.error('Login check failed:', error);
+        const res = await axiosInstance.get<UserData>('/auth/me');
+        setUserData(res.data);
+      } catch (err) {
+        console.error(err);
         setUserData(null);
       }
     };
@@ -27,8 +27,8 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       await axiosInstance.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout failed:', error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setUserData(null);
       window.location.href = '/';

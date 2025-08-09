@@ -13,12 +13,12 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
 
   const handleAuthCodeResponse = async (code: string) => {
     try {
-      const response = await axiosInstance.post<UserData>('/auth/google', { code });
-      const userData = response.data;
+      const res = await axiosInstance.post<UserData>('/auth/google', { code });
+      const userData = res.data;
       console.log('auth successful:', JSON.stringify(userData));
       handleLogin(userData);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
