@@ -21,7 +21,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
         const res = await axiosInstance.get('/data');
         setData(res.data);
       } catch (err) {
-        console.error(err);
+        void err;
       } finally {
         setIsLoading(false);
       }

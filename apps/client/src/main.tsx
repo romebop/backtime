@@ -17,7 +17,7 @@ const App: React.FC = () => {
         const res = await axiosInstance.get<UserData>('/auth/me');
         setUserData(res.data);
       } catch (err) {
-        console.error(err);
+        void err;
         setUserData(null);
       }
     };
@@ -28,9 +28,8 @@ const App: React.FC = () => {
     try {
       await axiosInstance.post('/auth/logout');
     } catch (err) {
-      console.error(err);
+      void err;
     } finally {
-      setUserData(null);
       window.location.href = '/';
     }
   }

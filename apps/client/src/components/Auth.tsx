@@ -18,7 +18,7 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
       console.log('auth successful:', JSON.stringify(userData));
       handleLogin(userData);
     } catch (err) {
-      console.error(err);
+      void err;
     }
   };
 
