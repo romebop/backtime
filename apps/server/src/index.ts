@@ -7,6 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
 import { google } from 'googleapis';
+import crypto from 'crypto';
 
 import { UserData } from '@backtime/types'
 
@@ -62,26 +63,37 @@ app.post('/auth/google', async (req: Request, res: Response) => {
     }
 
     const { sub, email, name, picture } = payload;
+    const db = mongoClient.db('backtime');
+    const usersCollection = db.collection('users');
 
     if (tokens.refresh_token) {
-      const db = mongoClient.db('backtime');
-      const usersCollection = db.collection('users');
       await usersCollection.updateOne(
         { sub },
-        { $set: { refreshToken: tokens.refresh_token } },
+        { $set: { googleRefreshToken: tokens.refresh_token } },
         { upsert: true }
       );
-      console.log('refresh token stored for user:', email);
+      console.log('google refresh token stored for user:', email);
     }
 
-    const token = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '10s' });
+    const accessToken = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '15m' });
 
-    res.cookie('token', token, {
+    const refreshToken = crypto.randomBytes(64).toString('hex');
+    const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    await usersCollection.updateOne(
+      { sub },
+      { $set: { appRefreshToken: hashedRefreshToken } },
+      { upsert: true }
+    );
+
+    res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production'
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
-    res.json({ sub, email, name, picture });
+    res.json({ accessToken, user: { sub, email, name, picture } });
 
   } catch (error) {
     console.error('google auth error:', error);
@@ -94,25 +106,60 @@ app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
   res.json({ sub, email, name, picture });
 });
 
-app.post('/auth/logout', (_req: Request, res: Response) => {
-  res.clearCookie('token');
+app.post('/auth/refresh', async (req: Request, res: Response) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'no refresh token' });
+  }
+
+  const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+  const db = mongoClient.db('backtime');
+  const usersCollection = db.collection('users');
+  const user = await usersCollection.findOne({ appRefreshToken: hashedRefreshToken });
+
+  if (!user) {
+    return res.status(401).json({ message: 'invalid refresh token' });
+  }
+
+  const { sub, email, name, picture } = user;
+  const accessToken = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '15m' });
+
+  res.json({ accessToken, user: { sub, email, name, picture } });
+});
+
+app.post('/auth/logout', async (req: Request, res: Response) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (refreshToken) {
+    const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const db = mongoClient.db('backtime');
+    await db.collection('users').updateOne(
+      { appRefreshToken: hashedRefreshToken }, 
+      { $unset: { appRefreshToken: '' } }
+    );
+  }
+  res.clearCookie('refreshToken');
   res.json({ message: 'logged out' });
 });
 
 function authenticateJWT(req: Request, res: Response, next: express.NextFunction) {
+  const authHeader = req.headers.authorization;
 
-  const token = req.cookies.token;
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: 'malformed token' });
+    }
 
-  if (!token) {
-    return res.status(401).json({ message: 'missing token in cookie' });
-  }
-
-  try {
-    const userData = jwt.verify(token, JWT_SECRET!) as UserData;
-    req.userData = userData;
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: 'invalid or expired JWT' });
+    try {
+      const userData = jwt.verify(token, JWT_SECRET!) as UserData;
+      req.userData = userData;
+      next();
+    } catch (error) {
+      return res.status(401).json({ message: 'invalid or expired JWT' });
+    }
+  } else {
+    res.status(401).json({ message: 'missing auth token' });
   }
 }
 
@@ -124,7 +171,7 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
     const db = mongoClient.db('sample_supplies');
     const sales = await db.collection('sales').find({}).limit(1).toArray();
-    await new Promise(resolve => setTimeout(resolve, 5000)); // temp delay 
+    // await new Promise(resolve => setTimeout(resolve, 5000)); // temp delay 
     res.json({ sales });
   } catch (error) {
     console.error('error loading data from mongodb:', error);

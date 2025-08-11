@@ -5,20 +5,27 @@ import styled from 'styled-components';
 import { UserData } from '@backtime/types';
 import Auth from './components/Auth';
 import Content from './components/Content';
-import axiosInstance from './util/axiosInstance';
+import LoadingDots from './components/LoadingDots';
+import axiosInstance, { setAccessToken } from './util/axiosInstance';
 
 const App: React.FC = () => {
 
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const res = await axiosInstance.get<UserData>('/auth/me');
-        setUserData(res.data);
+        const res = await axiosInstance.post<{ accessToken: string, user: UserData }>('/auth/refresh');
+        const { accessToken, user } = res.data;
+        setAccessToken(accessToken);
+        setUserData(user);
       } catch (err) {
         void err;
+        setAccessToken(null);
         setUserData(null);
+      } finally {
+        setIsLoading(false);
       }
     };
     checkLogin();
@@ -30,8 +37,13 @@ const App: React.FC = () => {
     } catch (err) {
       void err;
     } finally {
-      window.location.href = '/';
+      setAccessToken(null);
+      setUserData(null);
     }
+  }
+
+  if (isLoading) {
+    return <LoadingDots/>;
   }
 
   return (

@@ -11,21 +11,24 @@ interface ContentProps {
 }
 
 const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
-  const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
 
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setData(null);
+      const res = await axiosInstance.get('/data');
+      setData(res.data);
+    } catch (err) {
+      void err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axiosInstance.get('/data');
-        setData(res.data);
-      } catch (err) {
-        void err;
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -39,13 +42,14 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
         <h3>user data:</h3>
         <pre>{JSON.stringify(userData, null, 2)}</pre>
       </DataDisplay>
-      <button onClick={() => handleLogout()}>Logout</button>
+      <button onClick={handleLogout}>Logout</button>
       {isLoading
         ? <LoadingDots />
         : <DataDisplay>
             <h3>fetch from /data:</h3>
             <pre>{JSON.stringify(data, null, 2)}</pre>
           </DataDisplay>}
+      <button onClick={fetchData}>Fetch Data</button>
     </>
   );
 };
