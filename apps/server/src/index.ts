@@ -42,7 +42,6 @@ app.post('/auth/google', async (req: Request, res: Response) => {
   }
 
   try {
-
     const { tokens } = await googleClient.getToken({
       code,
       redirect_uri: REDIRECT_URI,
@@ -66,34 +65,37 @@ app.post('/auth/google', async (req: Request, res: Response) => {
     const db = mongoClient.db('backtime');
     const usersCollection = db.collection('users');
 
-    if (tokens.refresh_token) {
-      await usersCollection.updateOne(
-        { sub },
-        { $set: { googleRefreshToken: tokens.refresh_token } },
-        { upsert: true }
-      );
-      console.log('google refresh token stored for user:', email);
-    }
-
-    const accessToken = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '15m' });
-
+    // app refresh token
     const refreshToken = crypto.randomBytes(64).toString('hex');
     const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
-    await usersCollection.updateOne(
-      { sub },
-      { $set: { appRefreshToken: hashedRefreshToken } },
-      { upsert: true }
-    );
+    const updateDoc = {
+      $set: {
+        name,
+        email,
+        picture,
+        appRefreshToken: hashedRefreshToken,
+        ...(tokens.refresh_token && { googleRefreshToken: tokens.refresh_token }),
+        lastLoginAt: new Date(),
+      },
+      $setOnInsert: {
+        sub,
+        createdAt: new Date(),
+      },
+    };
+
+    await usersCollection.updateOne({ sub }, updateDoc, { upsert: true });
+
+    const accessToken = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '15m' });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
-    res.json({ accessToken, user: { sub, email, name, picture } });
+    res.json({ accessToken, userData: { sub, email, name, picture } });
 
   } catch (error) {
     console.error('google auth error:', error);

@@ -16,10 +16,10 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const res = await axiosInstance.post<{ accessToken: string, user: UserData }>('/auth/refresh');
-        const { accessToken, user } = res.data;
+        const res = await axiosInstance.post<{ accessToken: string, userData: UserData }>('/auth/refresh');
+        const { accessToken, userData } = res.data;
         setAccessToken(accessToken);
-        setUserData(user);
+        setUserData(userData);
       } catch (err) {
         void err;
         setAccessToken(null);
@@ -49,11 +49,8 @@ const App: React.FC = () => {
   return (
     <Wrapper>
       {userData !== null
-        ? <Content
-            handleLogout={handleLogout}
-            userData={userData}
-          />
-        : <Auth handleLogin={setUserData} />}
+        ? <Content {...{ handleLogout, userData }} />
+        : <Auth {...{ setUserData }} />}
     </Wrapper>
   );
 };

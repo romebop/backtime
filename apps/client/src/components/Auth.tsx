@@ -6,18 +6,18 @@ import { GOOGLE_AUTH_SCOPES } from '../util/constants';
 import axiosInstance, { setAccessToken } from '../util/axiosInstance';
 
 interface AuthProps {
-  handleLogin: (userData: UserData) => void;
+  setUserData: (userData: UserData) => void;
 }
 
-const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
+const Auth: React.FC<AuthProps> = ({ setUserData }) => {
 
   const handleAuthCodeResponse = async (code: string) => {
     try {
-      const res = await axiosInstance.post<{ accessToken: string, user: UserData }>('/auth/google', { code });
-      const { accessToken, user } = res.data;
-      console.log('auth successful:', JSON.stringify(user));
+      const res = await axiosInstance.post<{ accessToken: string, userData: UserData }>('/auth/google', { code });
+      const { accessToken, userData } = res.data;
+      console.log('auth successful:', JSON.stringify(userData));
       setAccessToken(accessToken);
-      handleLogin(user);
+      setUserData(userData);
     } catch (err) {
       void err;
     }
@@ -35,7 +35,6 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
             }
           },
         });
-
         const authButton = document.getElementById('google-signin-button');
         if (authButton) {
           authButton.onclick = () => codeClient.requestCode();
@@ -45,7 +44,7 @@ const Auth: React.FC<AuthProps> = ({ handleLogin }) => {
       }
     };
     initGoogle();
-  }, [handleLogin]);
+  }, [setUserData]);
 
   return (
     <Container>
