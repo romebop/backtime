@@ -13,20 +13,36 @@ interface ContentProps {
 const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
 
   const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [gmail, setGmail] = useState(null);
+  const [isLoadingGmail, setIsLoadingGmail] = useState(false);
 
   const fetchData = async () => {
     try {
-      setIsLoading(true);
+      setIsLoadingData(true);
       setData(null);
       const res = await axiosInstance.get('/data');
       setData(res.data);
     } catch (err) {
       void err;
     } finally {
-      setIsLoading(false);
+      setIsLoadingData(false);
     }
   };
+
+  const fetchGmail = async () => {
+    try {
+      setIsLoadingGmail(true);
+      setGmail(null);
+      const res = await axiosInstance.get('/gmail/messages');
+      setGmail(res.data);
+    } catch (err) {
+      void err;
+    } finally {
+      setIsLoadingGmail(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchData();
@@ -43,13 +59,20 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
         <pre>{JSON.stringify(userData, null, 2)}</pre>
       </DataDisplay>
       <button onClick={handleLogout}>Logout</button>
-      {isLoading
+      {isLoadingData
         ? <LoadingDots />
         : <DataDisplay>
             <h3>fetch from /data:</h3>
             <pre>{JSON.stringify(data, null, 2)}</pre>
           </DataDisplay>}
       <button onClick={fetchData}>Fetch Data</button>
+      {isLoadingGmail
+        ? <LoadingDots />
+        : <DataDisplay>
+            <h3>fetch from /gmail/messages:</h3>
+            <pre>{JSON.stringify(gmail, null, 2)}</pre>
+          </DataDisplay>}
+      <button onClick={fetchGmail}>Fetch Gmail</button>
     </>
   );
 };

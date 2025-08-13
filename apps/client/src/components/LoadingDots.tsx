@@ -14,7 +14,7 @@ const LoadingDots: React.FC = () => {
   }, []);
 
   return (
-    <DotsHouse>{dots}</DotsHouse>
+    <DotsHouse>[Loading{dots}]</DotsHouse>
   );
 };
 

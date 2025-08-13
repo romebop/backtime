@@ -34,14 +34,21 @@ const clientBuildPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientBuildPath));
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
-app.post('/auth/google', async (req: Request, res: Response) => {
-  const { code } = req.body;
 
+const mongoClient = new MongoClient(MONGODB_URI);
+mongoClient.connect().then(() => {
+  console.log('successfully connected to mongodb!');
+});
+
+app.post('/auth/google', async (req: Request, res: Response) => {
+
+  const { code } = req.body;
   if (!code) {
     return res.status(400).json({ message: 'missing authorization code' });
   }
 
   try {
+
     const { tokens } = await googleClient.getToken({
       code,
       redirect_uri: REDIRECT_URI,
@@ -53,15 +60,15 @@ app.post('/auth/google', async (req: Request, res: Response) => {
     }
 
     const ticket = await googleClient.verifyIdToken({
-      idToken: idToken,
+      idToken,
       audience: GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
     if (!payload) {
       return res.status(401).json({ message: 'no payload from google' });
     }
-
     const { sub, email, name, picture } = payload;
+
     const db = mongoClient.db('backtime');
     const usersCollection = db.collection('users');
 
@@ -109,6 +116,7 @@ app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
 });
 
 app.post('/auth/refresh', async (req: Request, res: Response) => {
+
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) {
     return res.status(401).json({ message: 'no refresh token' });
@@ -141,7 +149,7 @@ app.post('/auth/logout', async (req: Request, res: Response) => {
     );
   }
   res.clearCookie('refreshToken');
-  res.json({ message: 'logged out' });
+  res.json({ message: 'user logged out' });
 });
 
 function authenticateJWT(req: Request, res: Response, next: express.NextFunction) {
@@ -165,10 +173,6 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
   }
 }
 
-const mongoClient = new MongoClient(MONGODB_URI);
-mongoClient.connect().then(() => {
-  console.log('successfully connected to mongodb!');
-});
 app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
     const db = mongoClient.db('sample_supplies');
