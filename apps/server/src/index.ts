@@ -237,7 +237,7 @@ app.get('/gmail/message', authenticateJWT, async (req: Request, res: Response) =
       bodyData = payload.body.data;
     }
 
-    const body = Buffer.from(bodyData, 'base64').toString('utf8');
+    const body = Buffer.from(bodyData, 'base64').toString('utf8').replace(/(\r\n|\n|\r)/gm, " ").replace(/ +/g, " ");
 
     await new Promise(resolve => setTimeout(resolve, 3000)); // temp delay 
     res.json({ title, body });

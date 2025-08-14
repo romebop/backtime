@@ -14,8 +14,10 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
 
   const [data, setData] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [gmail, setGmail] = useState(null);
+  const [gmail, setGmail] = useState<{ title: string, body: string } | null>(null);
   const [isLoadingGmail, setIsLoadingGmail] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -31,7 +33,6 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
   };
 
   const fetchGmail = async () => {
-    console.log('fetch gmail called');
     try {
       setIsLoadingGmail(true);
       setGmail(null);
@@ -44,6 +45,18 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
     }
   };
 
+  const fetchSummary = async () => {
+    try {
+      setIsLoadingSummary(true);
+      setSummary(null);
+      const res = await axiosInstance.post('/gemini/summarize', { text: gmail?.body });
+      setSummary(res.data);
+    } catch (err) {
+      void err;
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -75,6 +88,13 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
             <pre>{JSON.stringify(gmail, null, 2)}</pre>
           </DataDisplay>}
       <button onClick={fetchGmail}>Fetch Gmail</button>
+      {isLoadingSummary
+        ? <LoadingDots />
+        : <DataDisplay>
+            <h3>fetch from /gemini/summarize:</h3>
+            <pre>{JSON.stringify(summary, null, 2)}</pre>
+          </DataDisplay>}
+      <button onClick={fetchSummary}>Fetch Gmail</button>
     </>
   );
 };
