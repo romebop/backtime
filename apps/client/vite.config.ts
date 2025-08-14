@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       '/auth': 'http://localhost:3000',
       '/data': 'http://localhost:3000',
+      '/gmail': 'http://localhost:3000',
     }
   }
 }))

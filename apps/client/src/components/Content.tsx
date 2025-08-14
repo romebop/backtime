@@ -31,10 +31,11 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
   };
 
   const fetchGmail = async () => {
+    console.log('fetch gmail called');
     try {
       setIsLoadingGmail(true);
       setGmail(null);
-      const res = await axiosInstance.get('/gmail/messages');
+      const res = await axiosInstance.get('/gmail/message');
       setGmail(res.data);
     } catch (err) {
       void err;
@@ -46,6 +47,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
 
   useEffect(() => {
     fetchData();
+    fetchGmail();
   }, []);
 
   return (
@@ -69,7 +71,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
       {isLoadingGmail
         ? <LoadingDots />
         : <DataDisplay>
-            <h3>fetch from /gmail/messages:</h3>
+            <h3>fetch from /gmail/message:</h3>
             <pre>{JSON.stringify(gmail, null, 2)}</pre>
           </DataDisplay>}
       <button onClick={fetchGmail}>Fetch Gmail</button>

@@ -18,6 +18,9 @@ const App: React.FC = () => {
       try {
         const res = await axiosInstance.post<{ accessToken: string, userData: UserData }>('/auth/refresh');
         const { accessToken, userData } = res.data;
+        console.log('@@@');
+        console.log(accessToken);
+        console.log(userData);
         setAccessToken(accessToken);
         setUserData(userData);
       } catch (err) {
@@ -64,7 +67,5 @@ const Wrapper = styled.div`
 `;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
     <App />
-  </React.StrictMode>,
 )

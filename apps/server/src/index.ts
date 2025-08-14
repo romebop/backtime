@@ -42,6 +42,8 @@ mongoClient.connect().then(() => {
 
 app.post('/auth/google', async (req: Request, res: Response) => {
 
+  console.log('@@@ /auth/google hit');
+
   const { code } = req.body;
   if (!code) {
     return res.status(400).json({ message: 'missing authorization code' });
@@ -110,14 +112,12 @@ app.post('/auth/google', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/auth/me', authenticateJWT, (req: Request, res: Response) => {
-  const { sub, email, name, picture }: UserData = req.userData!;
-  res.json({ sub, email, name, picture });
-});
-
 app.post('/auth/refresh', async (req: Request, res: Response) => {
 
+  console.log('@@@ /auth/refresh hit');
+
   const refreshToken = req.cookies.refreshToken;
+  console.log(refreshToken);
   if (!refreshToken) {
     return res.status(401).json({ message: 'no refresh token' });
   }
@@ -135,10 +135,13 @@ app.post('/auth/refresh', async (req: Request, res: Response) => {
   const { sub, email, name, picture } = user;
   const accessToken = jwt.sign({ sub, email, name, picture }, JWT_SECRET, { expiresIn: '15m' });
 
-  res.json({ accessToken, user: { sub, email, name, picture } });
+  res.json({ accessToken, userData: { sub, email, name, picture } });
 });
 
 app.post('/auth/logout', async (req: Request, res: Response) => {
+
+  console.log('@@@ /auth/logout hit');
+
   const refreshToken = req.cookies.refreshToken;
   if (refreshToken) {
     const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -177,7 +180,7 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
     const db = mongoClient.db('sample_supplies');
     const sales = await db.collection('sales').find({}).limit(1).toArray();
-    // await new Promise(resolve => setTimeout(resolve, 5000)); // temp delay 
+    await new Promise(resolve => setTimeout(resolve, 3000)); // temp delay 
     res.json({ sales });
   } catch (error) {
     console.error('error loading data from mongodb:', error);
@@ -185,7 +188,7 @@ app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   }
 });
 
-app.get('/gmail/messages', authenticateJWT, async (req: Request, res: Response) => {
+app.get('/gmail/message', authenticateJWT, async (req: Request, res: Response) => {
 
   const sub = req.userData?.sub;
   if (!sub) {
@@ -193,33 +196,50 @@ app.get('/gmail/messages', authenticateJWT, async (req: Request, res: Response) 
   }
 
   try {
-
+    
     const db = mongoClient.db('backtime');
     const usersCollection = db.collection('users');
     const user = await usersCollection.findOne({ sub });
 
-    if (!user || !user.refreshToken) {
+    if (!user || !user.googleRefreshToken) {
       return res.status(400).json({ message: 'gmail access not granted for this user' });
     }
 
     googleClient.setCredentials({
-      refresh_token: user.refreshToken,
+      refresh_token: user.googleRefreshToken,
     });
 
-    const { token } = await googleClient.getAccessToken();
-    if (!token) {
-      throw new Error('failed to get access token');
-    }
-    googleClient.setCredentials({ access_token: token });
-
     const gmail = google.gmail({ version: 'v1', auth: googleClient });
-    const response = await gmail.users.messages.list({ userId: 'me' });
 
-    res.json(response.data);
-    
+    const listResponse = await gmail.users.messages.list({ userId: 'me', labelIds: ['INBOX'] });
+    const messageId = listResponse.data.messages?.[0]?.id;
+
+    if (!messageId) {
+      return res.status(404).json({ message: 'No messages found.' });
+    }
+
+    const msgResponse = await gmail.users.messages.get({ userId: 'me', id: messageId });
+    const payload = msgResponse.data.payload;
+
+    const subjectHeader = payload?.headers?.find(h => h.name === 'Subject');
+    const title = subjectHeader?.value || 'No Subject';
+
+    let bodyData = '';
+    if (payload?.parts) {
+      const plainTextPart = payload.parts.find(part => part.mimeType === 'text/plain');
+      bodyData = plainTextPart?.body?.data || '';
+    } else if (payload?.body?.data) {
+      bodyData = payload.body.data;
+    }
+
+    const body = Buffer.from(bodyData, 'base64').toString('utf8');
+
+    await new Promise(resolve => setTimeout(resolve, 3000)); // temp delay 
+    res.json({ title, body });
+
   } catch (error) {
-    console.error('error fetching gmail messages:', error);
-    res.status(500).json({ message: 'failed to fetch gmail messages' });
+    console.error('error fetching gmail stuff:', error);
+    res.status(500).json({ message: 'failed to fetch gmail stuff' });
   }
 });
 
