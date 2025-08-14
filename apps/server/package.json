@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@backtime/types": "workspace:*",
+    "@google/generative-ai": "^0.24.1",
     "@types/cookie-parser": "^1.4.9",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.0",

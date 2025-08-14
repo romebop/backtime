@@ -1,13 +1,14 @@
+import crypto from 'crypto';
 import path from 'path';
 
-import 'dotenv/config';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import cookieParser from 'cookie-parser';
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
+import { google } from 'googleapis';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
-import { google } from 'googleapis';
-import crypto from 'crypto';
 
 import { UserData } from '@backtime/types'
 
@@ -15,17 +16,18 @@ import { UserData } from '@backtime/types'
 const PORT = process.env.PORT || 3000;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 if (!GOOGLE_CLIENT_ID) throw new Error('missing env var: GOOGLE_CLIENT_ID');
-const JWT_SECRET = process.env.JWT_SECRET!;
-if (!JWT_SECRET) throw new Error('missing env var: JWT_SECRET');
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 if (!GOOGLE_CLIENT_SECRET) throw new Error('missing env var: GOOGLE_CLIENT_SECRET');
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+if (!GEMINI_API_KEY) throw new Error('missing env var: GEMINI_API_KEY');
+const MONGODB_URI = process.env.MONGODB_URI!;
+if (!MONGODB_URI) throw new Error('missing env var: MONGODB_URI');
+const JWT_SECRET = process.env.JWT_SECRET!;
+if (!JWT_SECRET) throw new Error('missing env var: JWT_SECRET');
 const REDIRECT_URI = process.env.NODE_ENV === 'production'
   ? process.env.REDIRECT_URI_PROD
   : process.env.REDIRECT_URI_DEV;
 if (!REDIRECT_URI) throw new Error('missing env var: REDIRECT_URI');
-const MONGODB_URI = process.env.MONGODB_URI!;
-if (!MONGODB_URI) throw new Error('missing env var: MONGODB_URI');
-
 
 const app = express();
 app.use(cookieParser());
@@ -39,6 +41,9 @@ const mongoClient = new MongoClient(MONGODB_URI);
 mongoClient.connect().then(() => {
   console.log('successfully connected to mongodb!');
 });
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const gemini = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 app.post('/auth/google', async (req: Request, res: Response) => {
 
@@ -240,6 +245,27 @@ app.get('/gmail/message', authenticateJWT, async (req: Request, res: Response) =
   } catch (error) {
     console.error('error fetching gmail stuff:', error);
     res.status(500).json({ message: 'failed to fetch gmail stuff' });
+  }
+});
+
+app.post('/gemini/summarize', authenticateJWT, async (req: Request, res: Response) => {
+
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ message: 'missing text to summarize' });
+  }
+
+  try {
+
+    const prompt = `Summarize this in one sentence: ${text}`;
+    const result = await gemini.generateContent(prompt);
+    const response = await result.response;
+    const summary = response.text();
+    res.json({ summary });
+    
+  } catch (error) {
+    console.error('error fetching gemini stuff:', error);
+    res.status(500).json({ message: 'failed to fetch gemini stuff' });
   }
 });
 
