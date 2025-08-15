@@ -45,15 +45,14 @@ const App: React.FC = () => {
     }
   }
 
-  if (isLoading) {
-    return <LoadingDots/>;
-  }
-
   return (
     <Wrapper>
-      {userData !== null
-        ? <Content {...{ handleLogout, userData }} />
-        : <Auth {...{ setUserData }} />}
+      {isLoading
+        ? <LoadingDots />
+        : userData !== null
+          ? <Content {...{ handleLogout, userData }} />
+          : <Auth {...{ setUserData }} />
+      }
     </Wrapper>
   );
 };

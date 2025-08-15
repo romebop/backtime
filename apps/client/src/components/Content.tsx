@@ -65,58 +65,96 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
 
   return (
     <>
-      <Container>
+      <MessageContainer>
         <p>You are logged in!</p>
         <Emoji>( •̀ᄇ• ́)ﻭ✧</Emoji>
-      </Container>
-      <DataDisplay>
-        <h3>user data:</h3>
-        <pre>{JSON.stringify(userData, null, 2)}</pre>
-      </DataDisplay>
-      <button onClick={handleLogout}>Logout</button>
-      {isLoadingData
-        ? <LoadingDots />
-        : <DataDisplay>
-            <h3>fetch from /data:</h3>
-            <pre>{JSON.stringify(data, null, 2)}</pre>
-          </DataDisplay>}
-      <button onClick={fetchData}>Fetch Data</button>
-      {isLoadingGmail
-        ? <LoadingDots />
-        : <DataDisplay>
-            <h3>fetch from /gmail/message:</h3>
-            <pre>{JSON.stringify(gmail, null, 2)}</pre>
-          </DataDisplay>}
-      <button onClick={fetchGmail}>Fetch Gmail</button>
-      {isLoadingSummary
-        ? <LoadingDots />
-        : <DataDisplay>
-            <h3>fetch from /gemini/summarize:</h3>
-            <pre>{JSON.stringify(summary, null, 2)}</pre>
-          </DataDisplay>}
-      <button onClick={fetchSummary}>Fetch Gmail</button>
+      </MessageContainer>
+      <GridContainer>
+        <DataDisplay>
+          <Header>user data:</Header>
+          <pre>{JSON.stringify(userData, null, 2)}</pre>
+          <Button onClick={handleLogout}>Logout</Button>
+        </DataDisplay>
+        <DataDisplay isLoading={isLoadingData} >
+          {isLoadingData
+            ? <LoadingDots />
+            : <>
+                <Header>fetch data:</Header>
+                <pre>{JSON.stringify(data, null, 2)}</pre>
+                <Button onClick={fetchData}>Fetch Data</Button>
+              </>}
+        </DataDisplay>
+        <DataDisplay isLoading={isLoadingGmail} >
+          {isLoadingGmail
+            ? <LoadingDots />
+            : <>
+                <Header>fetch e-mail:</Header>
+                <pre>{JSON.stringify(gmail, null, 2)}</pre>
+                <Button onClick={fetchGmail}>Fetch Gmail</Button>
+              </>}
+        </DataDisplay>
+        <DataDisplay isLoading={isLoadingSummary} >
+          {isLoadingSummary
+            ? <LoadingDots />
+            : <>
+                <Header>fetch summary:</Header>
+                <pre>{JSON.stringify(summary, null, 2)}</pre>
+                <Button onClick={fetchSummary}>Fetch Summary</Button>
+              </>}
+        </DataDisplay>
+      </GridContainer>
     </>
   );
 };
 
-const Container = styled.div`
+const MessageContainer = styled.div`
   display: flex;
   align-items: center;
+  margin-bottom: 20px;
 `;
 
 const Emoji = styled.pre`
   margin-left: 8px;
 `;
 
-const DataDisplay = styled.div`
-  margin-top: 16px;
+const GridContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 120px;
+`;
+
+const DataDisplay = styled.div<{ isLoading?: boolean }>`
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  ${({ isLoading }) => isLoading
+    ? `
+        align-items: center;
+        justify-content: center;
+      `
+    : `justify-content: space-between;`
+  }
+  overflow: auto;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 14px 20px;
   pre {
     background-color: #f4f4f4;
     padding: 16px;
     border-radius: 4px;
     white-space: pre-wrap;
     word-break: break-all;
+    overflow: auto;
   }
+`;
+
+const Header = styled.div`
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const Button = styled.button`
+  width: 120px;
 `;
 
 export default Content;
