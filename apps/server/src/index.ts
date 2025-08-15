@@ -257,10 +257,11 @@ app.post('/gemini/summarize', authenticateJWT, async (req: Request, res: Respons
 
   try {
 
-    const prompt = `Summarize this in one sentence: ${text}`;
+    const prompt = `Summarize this shipping info text and tell me what my return date and warranty is: ${text}`;
     const result = await gemini.generateContent(prompt);
     const response = await result.response;
     const summary = response.text();
+    await new Promise(resolve => setTimeout(resolve, 3000)); // temp delay 
     res.json({ summary });
     
   } catch (error) {

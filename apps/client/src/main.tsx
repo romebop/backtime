@@ -7,6 +7,7 @@ import Auth from './components/Auth';
 import Content from './components/Content';
 import LoadingDots from './components/LoadingDots';
 import axiosInstance, { setAccessToken } from './util/axiosInstance';
+import { GlobalStyle } from './util/globalStyle';
 
 const App: React.FC = () => {
 
@@ -18,9 +19,6 @@ const App: React.FC = () => {
       try {
         const res = await axiosInstance.post<{ accessToken: string, userData: UserData }>('/auth/refresh');
         const { accessToken, userData } = res.data;
-        console.log('@@@');
-        console.log(accessToken);
-        console.log(userData);
         setAccessToken(accessToken);
         setUserData(userData);
       } catch (err) {
@@ -67,6 +65,7 @@ const Wrapper = styled.div`
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <GlobalStyle />
     <App />
   </React.StrictMode>,
 )

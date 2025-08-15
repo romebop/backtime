@@ -71,33 +71,33 @@ const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
       </MessageContainer>
       <GridContainer>
         <DataDisplay>
-          <Header>user data:</Header>
+          <Header>1. user data:</Header>
           <pre>{JSON.stringify(userData, null, 2)}</pre>
           <Button onClick={handleLogout}>Logout</Button>
         </DataDisplay>
-        <DataDisplay isLoading={isLoadingData} >
+        <DataDisplay $isLoading={isLoadingData} >
           {isLoadingData
             ? <LoadingDots />
             : <>
-                <Header>fetch data:</Header>
+                <Header>2. fetch data:</Header>
                 <pre>{JSON.stringify(data, null, 2)}</pre>
                 <Button onClick={fetchData}>Fetch Data</Button>
               </>}
         </DataDisplay>
-        <DataDisplay isLoading={isLoadingGmail} >
+        <DataDisplay $isLoading={isLoadingGmail} >
           {isLoadingGmail
             ? <LoadingDots />
             : <>
-                <Header>fetch e-mail:</Header>
+                <Header>3. fetch e-mail:</Header>
                 <pre>{JSON.stringify(gmail, null, 2)}</pre>
                 <Button onClick={fetchGmail}>Fetch Gmail</Button>
               </>}
         </DataDisplay>
-        <DataDisplay isLoading={isLoadingSummary} >
+        <DataDisplay $isLoading={isLoadingSummary} >
           {isLoadingSummary
             ? <LoadingDots />
             : <>
-                <Header>fetch summary:</Header>
+                <Header>4. fetch summary:</Header>
                 <pre>{JSON.stringify(summary, null, 2)}</pre>
                 <Button onClick={fetchSummary}>Fetch Summary</Button>
               </>}
@@ -117,22 +117,34 @@ const Emoji = styled.pre`
   margin-left: 8px;
 `;
 
+const columnWidth = 500;
+const gapLength = 80;
+const getWidthByColumns = (columns: number) =>
+  (columnWidth * columns) + (gapLength * (columns - 1));
 const GridContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 120px;
+  gap: ${gapLength}px;
+  grid-template-columns: repeat(4, ${columnWidth}px);
+  @media (max-width: ${getWidthByColumns(4)}px) {
+    grid-template-columns: repeat(2, ${columnWidth}px);
+  }
+  @media (max-width: ${getWidthByColumns(2)}px) {
+    grid-template-columns: ${columnWidth}px;
+  }
 `;
 
-const DataDisplay = styled.div<{ isLoading?: boolean }>`
+const DataDisplay = styled.div<{ $isLoading?: boolean }>`
   aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
-  ${({ isLoading }) => isLoading
+  ${({ $isLoading }) => $isLoading
     ? `
         align-items: center;
         justify-content: center;
       `
-    : `justify-content: space-between;`
+    : `
+        justify-content: space-between;
+      `
   }
   overflow: auto;
   border: 1px solid #bbb;
