@@ -183,8 +183,8 @@ function authenticateJWT(req: Request, res: Response, next: express.NextFunction
 
 app.get('/data', authenticateJWT, async (_req: Request, res: Response) => {
   try {
-    const db = mongoClient.db('sample_supplies');
-    const sales = await db.collection('sales').find({}).limit(1).toArray();
+    const db = mongoClient.db('sample_merchants');
+    const sales = await db.collection('merchants').find({}).limit(5).toArray();
     await new Promise(resolve => setTimeout(resolve, 3000)); // temp delay 
     res.json({ sales });
   } catch (error) {
