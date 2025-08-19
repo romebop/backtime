@@ -257,8 +257,7 @@ app.post('/gemini/summarize', authenticateJWT, async (req: Request, res: Respons
 
   try {
 
-    const prompt = `Summarize this shipping info text and tell me what my return date and warranty based on your currrent training data, for example order from Amazon 
-    usually has 90 days return windows for prime members, sony has 30 days return window and 1 or 2 years warranty is: ${text}`;
+    const prompt = `Summarize this samsung shipping info text and tell me what my return date and warranty based this link: https://order-help.us.samsung.com/articles/returns-refunds/what-is-samsungs-return-policy/669e3173cd7d5a05a5318406: ${text}`;
     const result = await gemini.generateContent(prompt);
     const response = await result.response;
     const summary = response.text();
