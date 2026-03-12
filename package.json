@@ -5,9 +5,9 @@
   "description": "A monorepo for backtime application",
   "main": "index.js",
   "scripts": {
-    "dev": "pnpm --filter server run dev",
-    "build": "pnpm --filter @backtime/types build && pnpm --filter server --filter client --parallel run build",
-    "clean": "rm -rf packages/types/dist apps/server/dist apps/client/dist apps/client/dist-types && find . -name tsconfig.tsbuildinfo -delete"
+    "dev": "pnpm --filter client run dev",
+    "build": "pnpm --filter @backtime/types build && pnpm --filter client run build",
+    "clean": "rm -rf packages/types/dist apps/client/dist apps/client/dist-types && find . -name tsconfig.tsbuildinfo -delete"
   },
   "keywords": [],
   "author": "",

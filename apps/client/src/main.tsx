@@ -1,55 +1,46 @@
 import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import styled from 'styled-components';
+import { User } from '@supabase/supabase-js';
 
-import { UserData } from '@backtime/types';
 import Auth from './components/Auth';
 import Content from './components/Content';
 import LoadingDots from './components/LoadingDots';
-import axiosInstance, { setAccessToken } from './util/axiosInstance';
+import { supabase } from './lib/supabase';
 import { GlobalStyle } from './util/globalStyle';
 
 const App: React.FC = () => {
 
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkLogin = async () => {
-      try {
-        const res = await axiosInstance.post<{ accessToken: string, userData: UserData }>('/auth/refresh');
-        const { accessToken, userData } = res.data;
-        setAccessToken(accessToken);
-        setUserData(userData);
-      } catch (err) {
-        void err;
-        setAccessToken(null);
-        setUserData(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkLogin();
+    // check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    // listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await axiosInstance.post('/auth/logout');
-    } catch (err) {
-      void err;
-    } finally {
-      setAccessToken(null);
-      setUserData(null);
-    }
-  }
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   return (
     <Wrapper>
       {isLoading
         ? <LoadingDots />
-        : userData !== null
-          ? <Content {...{ handleLogout, userData }} />
-          : <Auth {...{ setUserData }} />
+        : user
+          ? <Content {...{ handleLogout, user }} />
+          : <Auth />
       }
     </Wrapper>
   );
@@ -61,6 +52,7 @@ const Wrapper = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  padding: 24px;
 `;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

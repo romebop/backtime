@@ -1,172 +1,190 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { User } from '@supabase/supabase-js';
 
-import { UserData } from '@backtime/types';
+import { PurchasedItem } from '@backtime/types';
+import { supabase } from '../lib/supabase';
+import AddItem from './AddItem';
 import LoadingDots from './LoadingDots';
-import axiosInstance from '../util/axiosInstance';
 
 interface ContentProps {
   handleLogout: () => void;
-  userData: UserData | null;
+  user: User;
 }
 
-const Content: React.FC<ContentProps> = ({ handleLogout, userData }) => {
+const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
 
-  const [data, setData] = useState(null);
-  const [isLoadingData, setIsLoadingData] = useState(false);
-  const [gmail, setGmail] = useState<{ title: string, body: string } | null>(null);
-  const [isLoadingGmail, setIsLoadingGmail] = useState(false);
-  const [summary, setSummary] = useState(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [items, setItems] = useState<PurchasedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddItem, setShowAddItem] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      setIsLoadingData(true);
-      setData(null);
-      const res = await axiosInstance.get('/data');
-      setData(res.data);
-    } catch (err) {
-      void err;
-    } finally {
-      setIsLoadingData(false);
+  const fetchItems = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('return_by_date', { ascending: true });
+
+    if (!error && data) {
+      setItems(data as PurchasedItem[]);
     }
-  };
-
-  const fetchGmail = async () => {
-    try {
-      setIsLoadingGmail(true);
-      setGmail(null);
-      const res = await axiosInstance.get('/gmail/message');
-      setGmail(res.data);
-    } catch (err) {
-      void err;
-    } finally {
-      setIsLoadingGmail(false);
-    }
-  };
-
-  const fetchSummary = async () => {
-    try {
-      setIsLoadingSummary(true);
-      setSummary(null);
-      const res = await axiosInstance.post('/gemini/summarize', { text: gmail?.body });
-      setSummary(res.data);
-    } catch (err) {
-      void err;
-    } finally {
-      setIsLoadingSummary(false);
-    }
+    setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
-    fetchGmail();
-  }, []);
+    fetchItems();
+
+    // real-time subscription for item changes
+    const channel = supabase
+      .channel('items-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items', filter: `user_id=eq.${user.id}` },
+        () => { fetchItems(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user.id]);
+
+  const getDaysRemaining = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    const diff = new Date(dateStr).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const getBadgeColor = (days: number | null) => {
+    if (days === null) return '#888';
+    if (days <= 0) return '#888';
+    if (days <= 7) return '#e74c3c';
+    if (days <= 14) return '#f39c12';
+    return '#27ae60';
+  };
 
   return (
     <>
-      <MessageContainer>
-        <p>You are logged in!</p>
-        <Emoji>( •̀ᄇ• ́)ﻭ✧</Emoji>
-      </MessageContainer>
-      <GridContainer>
-        <DataDisplay>
-          <Header>1. user data:</Header>
-          <pre>{JSON.stringify(userData, null, 2)}</pre>
+      <TopBar>
+        <UserInfo>
+          <span>{user.email}</span>
+        </UserInfo>
+        <ButtonGroup>
+          <Button onClick={() => setShowAddItem(true)}>+ Add Item</Button>
           <Button onClick={handleLogout}>Logout</Button>
-        </DataDisplay>
-        <DataDisplay $isLoading={isLoadingData} >
-          {isLoadingData
-            ? <LoadingDots />
-            : <>
-                <Header>2. fetch data:</Header>
-                <pre>{JSON.stringify(data, null, 2)}</pre>
-                <Button onClick={fetchData}>Fetch Data</Button>
-              </>}
-        </DataDisplay>
-        <DataDisplay $isLoading={isLoadingGmail} >
-          {isLoadingGmail
-            ? <LoadingDots />
-            : <>
-                <Header>3. fetch e-mail:</Header>
-                <pre>{JSON.stringify(gmail, null, 2)}</pre>
-                <Button onClick={fetchGmail}>Fetch Gmail</Button>
-              </>}
-        </DataDisplay>
-        <DataDisplay $isLoading={isLoadingSummary} >
-          {isLoadingSummary
-            ? <LoadingDots />
-            : <>
-                <Header>4. fetch summary:</Header>
-                <pre>{JSON.stringify(summary, null, 2)}</pre>
-                <Button onClick={fetchSummary}>Fetch Summary</Button>
-              </>}
-        </DataDisplay>
-      </GridContainer>
+        </ButtonGroup>
+      </TopBar>
+      {showAddItem && (
+        <AddItem userId={user.id} onClose={() => setShowAddItem(false)} />
+      )}
+      {isLoading ? (
+        <LoadingDots />
+      ) : items.length === 0 ? (
+        <EmptyState>
+          <p>No items yet. Add your first purchase!</p>
+        </EmptyState>
+      ) : (
+        <GridContainer>
+          {items.map(item => {
+            const daysLeft = getDaysRemaining(item.return_by_date);
+            return (
+              <ItemCard key={item.id}>
+                <ItemName>{item.name}</ItemName>
+                {item.merchant && <Merchant>{item.merchant}</Merchant>}
+                {item.price && <Price>${item.price.toFixed(2)}</Price>}
+                {daysLeft !== null && (
+                  <Badge $color={getBadgeColor(daysLeft)}>
+                    {daysLeft > 0 ? `${daysLeft} days left to return` : 'Return expired'}
+                  </Badge>
+                )}
+                {item.warranty_end_date && (
+                  <WarrantyInfo>
+                    Warranty until {new Date(item.warranty_end_date).toLocaleDateString()}
+                  </WarrantyInfo>
+                )}
+              </ItemCard>
+            );
+          })}
+        </GridContainer>
+      )}
     </>
   );
 };
 
-const MessageContainer = styled.div`
+const TopBar = styled.div`
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin-bottom: 24px;
 `;
 
-const Emoji = styled.pre`
-  margin-left: 8px;
+const UserInfo = styled.div`
+  font-size: 14px;
+  color: #666;
 `;
 
-const columnWidth = 500;
-const gapLength = 80;
-const getWidthByColumns = (columns: number) =>
-  (columnWidth * columns) + (gapLength * (columns - 1));
+const EmptyState = styled.div`
+  text-align: center;
+  color: #888;
+  margin-top: 40px;
+`;
+
 const GridContainer = styled.div`
   display: grid;
-  gap: ${gapLength}px;
-  grid-template-columns: repeat(4, ${columnWidth}px);
-  @media (max-width: ${getWidthByColumns(4)}px) {
-    grid-template-columns: repeat(2, ${columnWidth}px);
-  }
-  @media (max-width: ${getWidthByColumns(2)}px) {
-    grid-template-columns: ${columnWidth}px;
-  }
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  width: 100%;
+  max-width: 1200px;
 `;
 
-const DataDisplay = styled.div<{ $isLoading?: boolean }>`
-  aspect-ratio: 1 / 1;
+const ItemCard = styled.div`
   display: flex;
   flex-direction: column;
-  ${({ $isLoading }) => $isLoading
-    ? `
-        align-items: center;
-        justify-content: center;
-      `
-    : `
-        justify-content: space-between;
-      `
-  }
-  overflow: auto;
-  border: 1px solid #bbb;
-  border-radius: 4px;
-  padding: 14px 20px;
-  pre {
-    background-color: #f4f4f4;
-    padding: 16px;
-    border-radius: 4px;
-    white-space: pre-wrap;
-    word-break: break-all;
-    overflow: auto;
-  }
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 `;
 
-const Header = styled.div`
+const ItemName = styled.div`
   font-size: 18px;
   font-weight: 600;
 `;
 
+const Merchant = styled.div`
+  font-size: 14px;
+  color: #666;
+`;
+
+const Price = styled.div`
+  font-size: 16px;
+  font-weight: 500;
+`;
+
+const Badge = styled.div<{ $color: string }>`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  background-color: ${({ $color }) => $color};
+  width: fit-content;
+`;
+
+const WarrantyInfo = styled.div`
+  font-size: 13px;
+  color: #888;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
 const Button = styled.button`
-  width: 120px;
+  padding: 6px 16px;
+  cursor: pointer;
 `;
 
 export default Content;
