@@ -10,5 +10,7 @@ export const GlobalStyle = createGlobalStyle`
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: ${({ theme }) => theme.colors.bgPage};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 `;

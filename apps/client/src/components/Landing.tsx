@@ -97,11 +97,12 @@ const Title = styled.h1`
   font-weight: 700;
   margin: 0 0 12px 0;
   line-height: 1.2;
+  color: ${({ theme }) => theme.colors.textHeading};
 `;
 
 const Subtitle = styled.p`
   font-size: 18px;
-  color: #555;
+  color: ${({ theme }) => theme.colors.textSecondary};
   margin: 0;
 `;
 
@@ -121,8 +122,8 @@ const StepNumber = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #333;
-  color: white;
+  background: ${({ theme }) => theme.colors.btnPrimaryBg};
+  color: ${({ theme }) => theme.colors.btnPrimaryText};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,15 +141,17 @@ const StepText = styled.div`
 const StepTitle = styled.div`
   font-weight: 600;
   font-size: 16px;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const StepDesc = styled.div`
   font-size: 14px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textMuted};
 `;
 
 const PrivacySection = styled.div`
-  background: #f8f9fa;
+  background: ${({ theme }) => theme.colors.bgSurface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
   padding: 28px;
 `;
@@ -157,6 +160,7 @@ const PrivacyTitle = styled.h3`
   margin: 0 0 20px 0;
   font-size: 18px;
   text-align: center;
+  color: ${({ theme }) => theme.colors.textHeading};
 `;
 
 const DataFlow = styled.div`
@@ -180,7 +184,8 @@ const FlowIcon = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #e0e0e0;
+  background: ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textSecondary};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,18 +195,19 @@ const FlowIcon = styled.div`
 
 const FlowArrow = styled.div`
   font-size: 20px;
-  color: #999;
+  color: ${({ theme }) => theme.colors.textDimmed};
   padding-top: 4px;
 `;
 
 const FlowLabel = styled.div`
   font-weight: 600;
   font-size: 13px;
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
 const FlowDesc = styled.div`
   font-size: 12px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textMuted};
 `;
 
 const PrivacyDetails = styled.ul`
@@ -215,14 +221,14 @@ const PrivacyDetails = styled.ul`
 
 const PrivacyItem = styled.li`
   font-size: 14px;
-  color: #555;
+  color: ${({ theme }) => theme.colors.textSecondary};
   padding-left: 20px;
   position: relative;
   &::before {
     content: '\\2713';
     position: absolute;
     left: 0;
-    color: #27ae60;
+    color: ${({ theme }) => theme.colors.accentGreen};
     font-weight: 600;
   }
 `;
@@ -236,7 +242,7 @@ const CTASection = styled.div`
 
 const CTALabel = styled.p`
   font-size: 14px;
-  color: #888;
+  color: ${({ theme }) => theme.colors.textDimmed};
   margin: 0;
   text-align: center;
 `;
@@ -249,10 +255,10 @@ const GoogleButton = styled.button`
   font-size: 15px;
   font-weight: 500;
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
-  background: white;
+  background: #ffffff;
   color: #3c4043;
   border: 1px solid #dadce0;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   &:hover {
     background: #f8f9fa;

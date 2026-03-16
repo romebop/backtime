@@ -27,6 +27,7 @@ const LoadingDots: React.FC = () => {
 
 const DotsHouse = styled.div`
   min-height: 18px;
+  color: ${({ theme }) => theme.colors.textMuted};
 `;
 
 const Dot = styled.span<{ visible: boolean }>`

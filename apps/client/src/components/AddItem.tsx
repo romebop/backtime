@@ -81,7 +81,8 @@ const AddItem: React.FC<AddItemProps> = ({ userId, onClose }) => {
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: ${({ theme }) => theme.colors.overlay};
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,8 +90,9 @@ const Overlay = styled.div`
 `;
 
 const Modal = styled.div`
-  background: white;
-  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.bgElevated};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
   padding: 32px;
   width: 100%;
   max-width: 420px;
@@ -99,6 +101,7 @@ const Modal = styled.div`
 const Title = styled.h2`
   margin: 0 0 20px 0;
   font-size: 20px;
+  color: ${({ theme }) => theme.colors.textHeading};
 `;
 
 const Form = styled.form`
@@ -112,14 +115,21 @@ const Label = styled.label`
   flex-direction: column;
   gap: 4px;
   font-size: 14px;
-  color: #444;
+  color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
 const Input = styled.input`
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
   font-size: 14px;
+  background: ${({ theme }) => theme.colors.inputBg};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  transition: border-color 0.15s;
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.borderHover};
+  }
 `;
 
 const ButtonRow = styled.div`
@@ -130,22 +140,35 @@ const ButtonRow = styled.div`
 `;
 
 const CancelButton = styled.button`
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
+  padding: 10px 18px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const SubmitButton = styled.button`
-  padding: 8px 16px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 6px;
-  background: #333;
-  color: white;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.btnPrimaryBg};
+  color: ${({ theme }) => theme.colors.btnPrimaryText};
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.15s;
+  &:hover {
+    background: ${({ theme }) => theme.colors.btnPrimaryHover};
+  }
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 `;

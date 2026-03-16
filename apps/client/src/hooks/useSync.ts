@@ -28,14 +28,11 @@ export const useSync = (userId: string) => {
       return;
     }
 
-    console.log('[sync] starting sync, gmail token present:', !!gmailToken);
     setSyncState({ isSyncing: true, progress: null, result: null, error: null });
 
     const callbacks: SyncCallbacks = {
       getEphemeralToken: async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('[sync] session exists:', !!session);
-        console.log('[sync] access_token preview:', session?.access_token?.slice(0, 20));
         const res = await fetch(EDGE_FUNCTION_URL, {
           method: 'POST',
           headers: {
@@ -78,7 +75,7 @@ export const useSync = (userId: string) => {
           .from('sync_state')
           .select('last_synced_at')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
         return data?.last_synced_at ?? null;
       },
 
@@ -99,7 +96,6 @@ export const useSync = (userId: string) => {
 
     try {
       const result = await runSync(gmailToken, callbacks);
-      console.log('[sync] complete:', result);
       setSyncState({ isSyncing: false, progress: null, result, error: null });
     } catch (err) {
       setSyncState({

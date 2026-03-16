@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { User } from '@supabase/supabase-js';
 
 import { PurchasedItem } from '@backtime/types';
@@ -18,7 +18,8 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
   const [items, setItems] = useState<PurchasedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddItem, setShowAddItem] = useState(false);
-  const { isSyncing, progress, startSync } = useSync(user.id);
+  const { isSyncing, progress, result, error: syncError, startSync } = useSync(user.id);
+  const theme = useTheme();
 
   const fetchItems = async () => {
     setIsLoading(true);
@@ -37,7 +38,6 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
     fetchItems();
     startSync();
 
-    // real-time subscription for item changes
     const channel = supabase
       .channel('items-changes')
       .on(
@@ -57,60 +57,78 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
   };
 
   const getBadgeColor = (days: number | null) => {
-    if (days === null) return '#888';
-    if (days <= 0) return '#888';
-    if (days <= 7) return '#e74c3c';
-    if (days <= 14) return '#f39c12';
-    return '#27ae60';
+    if (days === null || days <= 0) return theme.badge.neutral;
+    if (days <= 7) return theme.badge.urgent;
+    if (days <= 14) return theme.badge.warning;
+    return theme.badge.safe;
   };
 
   return (
     <>
       <TopBar>
-        <UserInfo>
-          <span>{user.email}</span>
-        </UserInfo>
+        <UserInfo>{user.email}</UserInfo>
         <ButtonGroup>
-          <Button onClick={() => setShowAddItem(true)}>+ Add Item</Button>
-          <Button onClick={handleLogout}>Logout</Button>
+          <ActionButton onClick={() => setShowAddItem(true)}>+ Add Item</ActionButton>
+          <SecondaryButton onClick={handleLogout}>Logout</SecondaryButton>
         </ButtonGroup>
       </TopBar>
       {showAddItem && (
         <AddItem userId={user.id} onClose={() => setShowAddItem(false)} />
       )}
-      {isSyncing && (
-        <SyncBanner>
-          {progress
-            ? `Scanning purchases... ${progress.current}/${progress.total}${progress.itemName ? ` — found ${progress.itemName}` : ''}`
-            : 'Checking for new purchases...'
-          }
-        </SyncBanner>
-      )}
+      <StatusBanner $variant={syncError ? 'error' : isSyncing ? 'syncing' : 'done'}>
+        {isSyncing ? (
+          <>
+            <StatusDot $variant="syncing" />
+            {progress
+              ? `Scanning purchases... ${progress.current}/${progress.total}${progress.itemName ? ` — found ${progress.itemName}` : ''}`
+              : 'Checking for new purchases...'
+            }
+          </>
+        ) : syncError ? (
+          <>
+            <StatusDot $variant="error" />
+            {`Sync failed: ${syncError}`}
+          </>
+        ) : result ? (
+          <>
+            <StatusDot $variant="done" />
+            {
+          result.synced > 0
+            ? `Synced ${result.synced} purchase${result.synced === 1 ? '' : 's'}${result.errors > 0 ? ` (${result.errors} failed)` : ''}`
+            : 'All purchases up to date'}
+          </>
+        ) : (
+          'Ready to sync'
+        )}
+      </StatusBanner>
       {isLoading ? (
         <LoadingDots />
       ) : items.length === 0 ? (
-        <EmptyState>
-          <p>No items yet. Add your first purchase!</p>
-        </EmptyState>
+        <EmptyState>No items yet. Add your first purchase!</EmptyState>
       ) : (
         <GridContainer>
           {items.map(item => {
             const daysLeft = getDaysRemaining(item.return_by_date);
+            const badge = getBadgeColor(daysLeft);
             return (
               <ItemCard key={item.id}>
-                <ItemName>{item.name}</ItemName>
+                <CardTop>
+                  <ItemName>{item.name}</ItemName>
+                  {item.price != null && <Price>${item.price.toFixed(2)}</Price>}
+                </CardTop>
                 {item.merchant && <Merchant>{item.merchant}</Merchant>}
-                {item.price && <Price>${item.price.toFixed(2)}</Price>}
-                {daysLeft !== null && (
-                  <Badge $color={getBadgeColor(daysLeft)}>
-                    {daysLeft > 0 ? `${daysLeft} days left to return` : 'Return expired'}
-                  </Badge>
-                )}
-                {item.warranty_end_date && (
-                  <WarrantyInfo>
-                    Warranty until {new Date(item.warranty_end_date).toLocaleDateString()}
-                  </WarrantyInfo>
-                )}
+                <CardBottom>
+                  {daysLeft !== null && (
+                    <Badge $bg={badge.bg} $text={badge.text}>
+                      {daysLeft > 0 ? `${daysLeft}d left to return` : 'Return expired'}
+                    </Badge>
+                  )}
+                  {item.warranty_end_date && (
+                    <WarrantyInfo>
+                      Warranty until {new Date(item.warranty_end_date).toLocaleDateString()}
+                    </WarrantyInfo>
+                  )}
+                </CardBottom>
               </ItemCard>
             );
           })}
@@ -126,23 +144,94 @@ const TopBar = styled.div`
   align-items: center;
   width: 100%;
   max-width: 1200px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 `;
 
 const UserInfo = styled.div`
   font-size: 14px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textMuted};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ActionButton = styled.button`
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.btnPrimaryBg};
+  color: ${({ theme }) => theme.colors.btnPrimaryText};
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover {
+    background: ${({ theme }) => theme.colors.btnPrimaryHover};
+  }
+`;
+
+const SecondaryButton = styled.button`
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  color: #888;
-  margin-top: 40px;
+  color: ${({ theme }) => theme.colors.textDimmed};
+  margin-top: 80px;
+  font-size: 16px;
+`;
+
+const StatusBanner = styled.div<{ $variant: 'syncing' | 'done' | 'error' }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 1200px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  background: ${({ $variant, theme }) => theme.banner[$variant].bg};
+  border: 1px solid ${({ $variant, theme }) => theme.banner[$variant].border};
+  border-radius: 10px;
+  font-size: 14px;
+  color: ${({ $variant, theme }) => theme.banner[$variant].text};
+`;
+
+const dotColors = {
+  syncing: (theme: any) => theme.colors.accentBlue,
+  done: (theme: any) => theme.colors.accentGreen,
+  error: (theme: any) => theme.banner.error.text,
+};
+
+const StatusDot = styled.div<{ $variant: 'syncing' | 'done' | 'error' }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: ${({ $variant, theme }) => dotColors[$variant](theme)};
+  animation: ${({ $variant }) => $variant === 'syncing' ? 'pulse 1.5s ease-in-out infinite' : 'none'};
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
 `;
 
 const GridContainer = styled.div`
   display: grid;
-  gap: 20px;
+  gap: 16px;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   width: 100%;
   max-width: 1200px;
@@ -153,61 +242,62 @@ const ItemCard = styled.div`
   flex-direction: column;
   gap: 8px;
   padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.bgElevated};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  transition: border-color 0.15s;
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+  }
+`;
+
+const CardTop = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 `;
 
 const ItemName = styled.div`
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
+  color: ${({ theme }) => theme.colors.textHeading};
+  line-height: 1.3;
 `;
 
 const Merchant = styled.div`
   font-size: 14px;
-  color: #666;
+  color: ${({ theme }) => theme.colors.textMuted};
 `;
 
 const Price = styled.div`
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textHeading};
+  white-space: nowrap;
 `;
 
-const Badge = styled.div<{ $color: string }>`
+const CardBottom = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+`;
+
+const Badge = styled.div<{ $bg: string; $text: string }>`
   display: inline-block;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: white;
-  background-color: ${({ $color }) => $color};
-  width: fit-content;
+  color: ${({ $text }) => $text};
+  background: ${({ $bg }) => $bg};
 `;
 
 const WarrantyInfo = styled.div`
   font-size: 13px;
-  color: #888;
-`;
-
-const SyncBanner = styled.div`
-  width: 100%;
-  max-width: 1200px;
-  padding: 10px 20px;
-  margin-bottom: 16px;
-  background: #f0f7ff;
-  border: 1px solid #c4dff6;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #1a73e8;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const Button = styled.button`
-  padding: 6px 16px;
-  cursor: pointer;
+  color: ${({ theme }) => theme.colors.textDimmed};
 `;
 
 export default Content;

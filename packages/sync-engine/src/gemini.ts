@@ -33,8 +33,6 @@ export const parseEmailWithGemini = async (
   accessToken: string,
   email: ParsedEmail,
 ): Promise<ParsedPurchase | null> => {
-  console.log('[gemini] calling REST API with token:', accessToken?.slice(0, 20));
-
   const emailText = `From: ${email.from}\nSubject: ${email.subject}\nDate: ${email.date}\n\n${email.body}`;
 
   const response = await fetch(GEMINI_API_URL, {
@@ -65,8 +63,6 @@ export const parseEmailWithGemini = async (
 
   const data = await response.json();
   const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  console.log('[gemini] response received, length:', responseText.length);
-
   try {
     const cleaned = responseText
       .replace(/```json\n?/g, '')
