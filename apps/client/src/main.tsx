@@ -56,7 +56,7 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // One click: popup for Google sign-in with profile + Gmail scopes
+  // One click: redirect to Google with profile + Gmail scopes
   const handleSignIn = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -67,36 +67,7 @@ const App: React.FC = () => {
           access_type: 'online',
           prompt: 'consent',
         },
-        skipBrowserRedirect: true,
       },
-    }).then(({ data }) => {
-      if (data?.url) {
-        const popup = window.open(data.url, 'google-auth', 'width=500,height=600,menubar=no,toolbar=no');
-
-        // Listen for the OAuth callback
-        const checkPopup = setInterval(() => {
-          try {
-            if (!popup || popup.closed) {
-              clearInterval(checkPopup);
-              return;
-            }
-            // Check if popup has redirected back to our origin
-            if (popup.location.origin === window.location.origin) {
-              const url = new URL(popup.location.href);
-              popup.close();
-              clearInterval(checkPopup);
-
-              // Supabase PKCE flow: exchange the code from the URL
-              const code = url.searchParams.get('code');
-              if (code) {
-                supabase.auth.exchangeCodeForSession(code);
-              }
-            }
-          } catch {
-            // Cross-origin — popup is still on Google's domain, keep waiting
-          }
-        }, 500);
-      }
     });
   }, []);
 

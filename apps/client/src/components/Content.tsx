@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 
 import { PurchasedItem } from '@backtime/types';
 import { supabase } from '../lib/supabase';
+import { useSync } from '../hooks/useSync';
 import AddItem from './AddItem';
 import LoadingDots from './LoadingDots';
 
@@ -17,6 +18,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
   const [items, setItems] = useState<PurchasedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddItem, setShowAddItem] = useState(false);
+  const { isSyncing, progress, startSync } = useSync(user.id);
 
   const fetchItems = async () => {
     setIsLoading(true);
@@ -33,6 +35,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
 
   useEffect(() => {
     fetchItems();
+    startSync();
 
     // real-time subscription for item changes
     const channel = supabase
@@ -74,6 +77,14 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
       </TopBar>
       {showAddItem && (
         <AddItem userId={user.id} onClose={() => setShowAddItem(false)} />
+      )}
+      {isSyncing && (
+        <SyncBanner>
+          {progress
+            ? `Scanning purchases... ${progress.current}/${progress.total}${progress.itemName ? ` — found ${progress.itemName}` : ''}`
+            : 'Checking for new purchases...'
+          }
+        </SyncBanner>
       )}
       {isLoading ? (
         <LoadingDots />
@@ -175,6 +186,18 @@ const Badge = styled.div<{ $color: string }>`
 const WarrantyInfo = styled.div`
   font-size: 13px;
   color: #888;
+`;
+
+const SyncBanner = styled.div`
+  width: 100%;
+  max-width: 1200px;
+  padding: 10px 20px;
+  margin-bottom: 16px;
+  background: #f0f7ff;
+  border: 1px solid #c4dff6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a73e8;
 `;
 
 const ButtonGroup = styled.div`
