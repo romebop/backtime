@@ -1,8 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 import { runSync, type SyncCallbacks, type ParsedPurchase } from '@backtime/sync-engine';
 import { getGmailToken } from '../lib/google';
 import { supabase } from '../lib/supabase';
+
+export interface PendingItem {
+  tempId: string;
+  name: string;
+  merchant: string;
+  price: number | null;
+  purchase_date: string | null;
+  return_by_date: string | null;
+  warranty_end_date: string | null;
+  order_number: string | null;
+  status: 'pending' | 'saved' | 'error';
+}
 
 interface SyncState {
   isSyncing: boolean;
@@ -20,6 +32,9 @@ export const useSync = (userId: string) => {
     result: null,
     error: null,
   });
+  const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
+  const pendingRef = useRef(pendingItems);
+  pendingRef.current = pendingItems;
 
   const startSync = useCallback(async () => {
     const gmailToken = getGmailToken();
@@ -29,9 +44,12 @@ export const useSync = (userId: string) => {
     }
 
     setSyncState({ isSyncing: true, progress: null, result: null, error: null });
+    setPendingItems([]);
 
     const callbacks: SyncCallbacks = {
-      getEphemeralToken: async () => {
+      getGeminiToken: async () => {
+        console.log('[token] requesting OAuth token from edge function...');
+        const start = performance.now();
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(EDGE_FUNCTION_URL, {
           method: 'POST',
@@ -43,11 +61,38 @@ export const useSync = (userId: string) => {
         });
         if (!res.ok) {
           const body = await res.text();
-          console.error('[sync] ephemeral token error:', res.status, body);
+          console.error('[token] error:', res.status, body);
           throw new Error('Failed to get ephemeral token');
         }
         const { token } = await res.json();
+        console.log(`[token] received in ${Math.round(performance.now() - start)}ms`);
         return token;
+      },
+
+      onPurchaseExtracted: (purchase: ParsedPurchase, emailId: string) => {
+        setPendingItems(prev => [...prev, {
+          tempId: emailId,
+          name: purchase.name,
+          merchant: purchase.merchant,
+          price: purchase.price,
+          purchase_date: purchase.purchaseDate,
+          return_by_date: purchase.returnByDate,
+          warranty_end_date: purchase.warrantyEndDate,
+          order_number: purchase.orderNumber,
+          status: 'pending',
+        }]);
+      },
+
+      onPurchaseSaved: (emailId: string) => {
+        setPendingItems(prev =>
+          prev.map(item => item.tempId === emailId ? { ...item, status: 'saved' as const } : item)
+        );
+      },
+
+      onPurchaseFailed: (emailId: string) => {
+        setPendingItems(prev =>
+          prev.map(item => item.tempId === emailId ? { ...item, status: 'error' as const } : item)
+        );
       },
 
       savePurchase: async (purchase: ParsedPurchase, emailId: string) => {
@@ -65,8 +110,8 @@ export const useSync = (userId: string) => {
           status: 'active',
         });
         if (error && error.code !== '23505') {
-          // Ignore duplicate key errors, log everything else
           console.error('[sync] save error:', error);
+          throw error;
         }
       },
 
@@ -107,5 +152,5 @@ export const useSync = (userId: string) => {
     }
   }, [userId]);
 
-  return { ...syncState, startSync };
+  return { ...syncState, pendingItems, startSync };
 };

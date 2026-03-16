@@ -12,7 +12,7 @@ const Landing: React.FC<LandingProps> = ({ onSignIn }) => {
       <Hero>
         <Title>Never miss a return deadline again</Title>
         <Subtitle>
-          Backtime scans your receipts and tracks return windows automatically.
+          BackTime scans your receipts and tracks return windows automatically.
         </Subtitle>
       </Hero>
 
@@ -57,7 +57,7 @@ const Landing: React.FC<LandingProps> = ({ onSignIn }) => {
           <FlowArrow>&rarr;</FlowArrow>
           <FlowStep>
             <FlowIcon>3</FlowIcon>
-            <FlowLabel>Backtime</FlowLabel>
+            <FlowLabel>BackTime</FlowLabel>
             <FlowDesc>only saves purchase details</FlowDesc>
           </FlowStep>
         </DataFlow>

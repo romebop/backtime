@@ -4,7 +4,7 @@ import { User } from '@supabase/supabase-js';
 
 import { PurchasedItem } from '@backtime/types';
 import { supabase } from '../lib/supabase';
-import { useSync } from '../hooks/useSync';
+import { useSync, type PendingItem } from '../hooks/useSync';
 import AddItem from './AddItem';
 import LoadingDots from './LoadingDots';
 
@@ -18,7 +18,7 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
   const [items, setItems] = useState<PurchasedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddItem, setShowAddItem] = useState(false);
-  const { isSyncing, progress, result, error: syncError, startSync } = useSync(user.id);
+  const { isSyncing, progress, result, error: syncError, pendingItems, startSync } = useSync(user.id);
   const theme = useTheme();
 
   const fetchItems = async () => {
@@ -103,10 +103,24 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
       </StatusBanner>
       {isLoading ? (
         <LoadingDots />
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && pendingItems.length === 0 ? (
         <EmptyState>No items yet. Add your first purchase!</EmptyState>
       ) : (
         <GridContainer>
+          {pendingItems.filter(p => p.status !== 'saved').map(pending => (
+            <ItemCard key={`pending-${pending.tempId}`} $pending={pending.status}>
+              <CardTop>
+                <ItemName>{pending.name}</ItemName>
+                {pending.price != null && <Price>${pending.price.toFixed(2)}</Price>}
+              </CardTop>
+              {pending.merchant && <Merchant>{pending.merchant}</Merchant>}
+              <CardBottom>
+                <SyncStatus $status={pending.status}>
+                  {pending.status === 'pending' ? 'Saving...' : 'Save failed'}
+                </SyncStatus>
+              </CardBottom>
+            </ItemCard>
+          ))}
           {items.map(item => {
             const daysLeft = getDaysRemaining(item.return_by_date);
             const badge = getBadgeColor(daysLeft);
@@ -237,15 +251,17 @@ const GridContainer = styled.div`
   max-width: 1200px;
 `;
 
-const ItemCard = styled.div`
+const ItemCard = styled.div<{ $pending?: 'pending' | 'error' }>`
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 20px;
   background: ${({ theme }) => theme.colors.bgElevated};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px solid ${({ $pending, theme }) =>
+    $pending === 'error' ? theme.banner.error.border : theme.colors.border};
   border-radius: 12px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, opacity 0.2s;
+  opacity: ${({ $pending }) => $pending === 'pending' ? 0.7 : 1};
   &:hover {
     border-color: ${({ theme }) => theme.colors.borderHover};
   }
@@ -298,6 +314,13 @@ const Badge = styled.div<{ $bg: string; $text: string }>`
 const WarrantyInfo = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textDimmed};
+`;
+
+const SyncStatus = styled.div<{ $status: 'pending' | 'error' }>`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${({ $status, theme }) =>
+    $status === 'pending' ? theme.colors.accentBlue : theme.banner.error.text};
 `;
 
 export default Content;

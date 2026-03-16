@@ -17,9 +17,9 @@ const LoadingDots: React.FC = () => {
     <DotsHouse>
       Loading
       <span>
-        <Dot visible={dotCount > 0}>.</Dot>
-        <Dot visible={dotCount > 1}>.</Dot>
-        <Dot visible={dotCount > 2}>.</Dot>
+        <Dot $visible={dotCount > 0}>.</Dot>
+        <Dot $visible={dotCount > 1}>.</Dot>
+        <Dot $visible={dotCount > 2}>.</Dot>
       </span>
     </DotsHouse>
   );
@@ -30,8 +30,8 @@ const DotsHouse = styled.div`
   color: ${({ theme }) => theme.colors.textMuted};
 `;
 
-const Dot = styled.span<{ visible: boolean }>`
-  opacity: ${({ visible }) => visible ? 1 : 0};
+const Dot = styled.span<{ $visible: boolean }>`
+  opacity: ${({ $visible }) => $visible ? 1 : 0};
 `;
 
 export default LoadingDots;

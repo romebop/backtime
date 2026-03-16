@@ -6,7 +6,7 @@ function IndexPopup() {
         flexDirection: 'column',
         padding: 16,
       }}>
-      <h1>Backtime Extension</h1>
+      <h1>BackTime Extension</h1>
     </div>
   )
 }
