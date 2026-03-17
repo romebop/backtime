@@ -1,6 +1,6 @@
 [build]
   base = "/"
-  command = "pnpm build"
+  command = "pnpm install && pnpm build"
   publish = "apps/client/dist"
 
 # SPA — all routes serve index.html
