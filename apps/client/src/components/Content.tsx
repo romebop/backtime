@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import styled, { useTheme } from 'styled-components';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import styled, { useTheme, keyframes } from 'styled-components';
 import { User } from '@supabase/supabase-js';
 
 import { PurchasedItem } from '@backtime/types';
+import { type ParsedPurchase } from '@backtime/sync-engine';
 import { supabase } from '../lib/supabase';
-import { useSync, type PendingItem } from '../hooks/useSync';
+import { useSync, type ItemCallbacks } from '../hooks/useSync';
 import AddItem from './AddItem';
 import LoadingDots from './LoadingDots';
+
+type SyncStatus = 'pending' | 'saved' | 'error';
+type DisplayItem = PurchasedItem & { _syncStatus?: SyncStatus };
 
 interface ContentProps {
   handleLogout: () => void;
@@ -15,35 +19,111 @@ interface ContentProps {
 
 const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
 
-  const [items, setItems] = useState<PurchasedItem[]>([]);
+  const [dbItems, setDbItems] = useState<PurchasedItem[]>([]);
+  const [optimisticItems, setOptimisticItems] = useState<DisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddItem, setShowAddItem] = useState(false);
-  const { isSyncing, progress, result, error: syncError, pendingItems, startSync } = useSync(user.id);
   const theme = useTheme();
 
-  const fetchItems = async () => {
-    setIsLoading(true);
+  const itemCallbacks = useRef<ItemCallbacks>({
+    onExtracted: (purchase: ParsedPurchase, emailId: string) => {
+      const item: DisplayItem = {
+        id: `optimistic-${emailId}`,
+        user_id: user.id,
+        name: purchase.name,
+        merchant: purchase.merchant,
+        price: purchase.price,
+        purchase_date: purchase.purchaseDate,
+        return_by_date: purchase.returnByDate,
+        warranty_end_date: purchase.warrantyEndDate,
+        order_number: purchase.orderNumber,
+        email_id: emailId,
+        status: 'active',
+        source: 'email_scan',
+        return_policy: null,
+        created_at: new Date().toISOString(),
+        _syncStatus: 'pending',
+      };
+      setOptimisticItems(prev => [...prev, item]);
+    },
+    onSaved: (emailId: string) => {
+      setOptimisticItems(prev =>
+        prev.map(item =>
+          item.email_id === emailId ? { ...item, _syncStatus: 'saved' as const } : item
+        )
+      );
+      // Clear sync status after fade animation completes
+      setTimeout(() => {
+        setOptimisticItems(prev =>
+          prev.map(item =>
+            item.email_id === emailId ? { ...item, _syncStatus: undefined } : item
+          )
+        );
+      }, 2500);
+    },
+    onFailed: (emailId: string) => {
+      setOptimisticItems(prev =>
+        prev.map(item =>
+          item.email_id === emailId ? { ...item, _syncStatus: 'error' as const } : item
+        )
+      );
+    },
+  }).current;
+
+  const { isSyncing, progress, result, error: syncError, startSync } = useSync(user.id, itemCallbacks);
+
+  // Merge DB items with optimistic items — DB wins for matching email_ids
+  // Optimistic items only disappear once the real DB row arrives
+  const items: DisplayItem[] = useMemo(() => {
+    const dbEmailIds = new Set(dbItems.map(item => item.email_id).filter(Boolean));
+    const stillOptimistic = optimisticItems.filter(
+      item => !dbEmailIds.has(item.email_id)
+    );
+    return [...stillOptimistic, ...dbItems];
+  }, [dbItems, optimisticItems]);
+
+  const fetchItems = async (initial = false) => {
+    if (initial) setIsLoading(true);
     const { data, error } = await supabase
       .from('items')
       .select('*')
+      .eq('user_id', user.id)
       .order('return_by_date', { ascending: true });
 
     if (!error && data) {
-      setItems(data as PurchasedItem[]);
+      setDbItems(data as PurchasedItem[]);
     }
-    setIsLoading(false);
+    if (initial) setIsLoading(false);
   };
 
   useEffect(() => {
-    fetchItems();
+    fetchItems(true);
     startSync();
 
     const channel = supabase
       .channel('items-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'items', filter: `user_id=eq.${user.id}` },
-        () => { fetchItems(); }
+        { event: 'INSERT', schema: 'public', table: 'items', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          setDbItems(prev => [...prev, payload.new as PurchasedItem]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'items', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          setDbItems(prev =>
+            prev.map(item => item.id === (payload.new as PurchasedItem).id ? payload.new as PurchasedItem : item)
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'items', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          setDbItems(prev => prev.filter(item => item.id !== (payload.old as PurchasedItem).id));
+        }
       )
       .subscribe();
 
@@ -103,29 +183,16 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
       </StatusBanner>
       {isLoading ? (
         <LoadingDots />
-      ) : items.length === 0 && pendingItems.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState>No items yet. Add your first purchase!</EmptyState>
       ) : (
         <GridContainer>
-          {pendingItems.filter(p => p.status !== 'saved').map(pending => (
-            <ItemCard key={`pending-${pending.tempId}`} $pending={pending.status}>
-              <CardTop>
-                <ItemName>{pending.name}</ItemName>
-                {pending.price != null && <Price>${pending.price.toFixed(2)}</Price>}
-              </CardTop>
-              {pending.merchant && <Merchant>{pending.merchant}</Merchant>}
-              <CardBottom>
-                <SyncStatus $status={pending.status}>
-                  {pending.status === 'pending' ? 'Saving...' : 'Save failed'}
-                </SyncStatus>
-              </CardBottom>
-            </ItemCard>
-          ))}
           {items.map(item => {
             const daysLeft = getDaysRemaining(item.return_by_date);
             const badge = getBadgeColor(daysLeft);
+            const syncStatus = item._syncStatus;
             return (
-              <ItemCard key={item.id}>
+              <ItemCard key={item.id} $syncStatus={syncStatus}>
                 <CardTop>
                   <ItemName>{item.name}</ItemName>
                   {item.price != null && <Price>${item.price.toFixed(2)}</Price>}
@@ -143,6 +210,24 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
                     </WarrantyInfo>
                   )}
                 </CardBottom>
+                <SyncRow>
+                  {syncStatus === 'pending' ? (
+                    <SyncIndicator $status="pending">
+                      <Spinner viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" /></Spinner>
+                      Saving...
+                    </SyncIndicator>
+                  ) : syncStatus === 'saved' ? (
+                    <SyncIndicator $status="saved">
+                      <SyncIcon viewBox="0 0 16 16"><path d="M3 8.5l3.5 3.5L13 4" /></SyncIcon>
+                      Saved
+                    </SyncIndicator>
+                  ) : syncStatus === 'error' ? (
+                    <SyncIndicator $status="error">
+                      <SyncIcon viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></SyncIcon>
+                      Save failed
+                    </SyncIndicator>
+                  ) : null}
+                </SyncRow>
               </ItemCard>
             );
           })}
@@ -251,17 +336,17 @@ const GridContainer = styled.div`
   max-width: 1200px;
 `;
 
-const ItemCard = styled.div<{ $pending?: 'pending' | 'error' }>`
+const ItemCard = styled.div<{ $syncStatus?: SyncStatus }>`
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 20px;
   background: ${({ theme }) => theme.colors.bgElevated};
-  border: 1px solid ${({ $pending, theme }) =>
-    $pending === 'error' ? theme.banner.error.border : theme.colors.border};
+  border: 1px solid ${({ $syncStatus, theme }) =>
+    $syncStatus === 'error' ? theme.banner.error.border : theme.colors.border};
   border-radius: 12px;
   transition: border-color 0.15s, opacity 0.2s;
-  opacity: ${({ $pending }) => $pending === 'pending' ? 0.7 : 1};
+  opacity: ${({ $syncStatus }) => $syncStatus === 'pending' ? 0.7 : 1};
   &:hover {
     border-color: ${({ theme }) => theme.colors.borderHover};
   }
@@ -316,11 +401,59 @@ const WarrantyInfo = styled.div`
   color: ${({ theme }) => theme.colors.textDimmed};
 `;
 
-const SyncStatus = styled.div<{ $status: 'pending' | 'error' }>`
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+const fadeOut = keyframes`
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+`;
+
+const SyncRow = styled.div`
+  min-height: 18px;
+`;
+
+const SyncIndicator = styled.div<{ $status: 'pending' | 'error' | 'saved' }>`
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 13px;
   font-weight: 500;
   color: ${({ $status, theme }) =>
-    $status === 'pending' ? theme.colors.accentBlue : theme.banner.error.text};
+    $status === 'pending' ? theme.colors.accentBlue
+    : $status === 'saved' ? theme.colors.accentGreen
+    : theme.banner.error.text};
+  animation: ${({ $status }) => $status === 'saved' ? fadeOut : 'none'} 2.5s ease forwards;
+`;
+
+const Spinner = styled.svg`
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  animation: ${spin} 0.8s linear infinite;
+  circle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-dasharray: 28;
+    stroke-dashoffset: 8;
+    stroke-linecap: round;
+  }
+`;
+
+const SyncIcon = styled.svg`
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 `;
 
 export default Content;

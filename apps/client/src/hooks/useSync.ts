@@ -1,19 +1,13 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
 import { runSync, type SyncCallbacks, type ParsedPurchase } from '@backtime/sync-engine';
 import { getGmailToken } from '../lib/google';
 import { supabase } from '../lib/supabase';
 
-export interface PendingItem {
-  tempId: string;
-  name: string;
-  merchant: string;
-  price: number | null;
-  purchase_date: string | null;
-  return_by_date: string | null;
-  warranty_end_date: string | null;
-  order_number: string | null;
-  status: 'pending' | 'saved' | 'error';
+export interface ItemCallbacks {
+  onExtracted: (purchase: ParsedPurchase, emailId: string) => void;
+  onSaved: (emailId: string) => void;
+  onFailed: (emailId: string) => void;
 }
 
 interface SyncState {
@@ -25,16 +19,13 @@ interface SyncState {
 
 const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-token`;
 
-export const useSync = (userId: string) => {
+export const useSync = (userId: string, itemCallbacks: ItemCallbacks) => {
   const [syncState, setSyncState] = useState<SyncState>({
     isSyncing: false,
     progress: null,
     result: null,
     error: null,
   });
-  const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
-  const pendingRef = useRef(pendingItems);
-  pendingRef.current = pendingItems;
 
   const startSync = useCallback(async () => {
     const gmailToken = getGmailToken();
@@ -44,7 +35,6 @@ export const useSync = (userId: string) => {
     }
 
     setSyncState({ isSyncing: true, progress: null, result: null, error: null });
-    setPendingItems([]);
 
     const callbacks: SyncCallbacks = {
       getGeminiToken: async () => {
@@ -69,30 +59,16 @@ export const useSync = (userId: string) => {
         return token;
       },
 
-      onPurchaseExtracted: (purchase: ParsedPurchase, emailId: string) => {
-        setPendingItems(prev => [...prev, {
-          tempId: emailId,
-          name: purchase.name,
-          merchant: purchase.merchant,
-          price: purchase.price,
-          purchase_date: purchase.purchaseDate,
-          return_by_date: purchase.returnByDate,
-          warranty_end_date: purchase.warrantyEndDate,
-          order_number: purchase.orderNumber,
-          status: 'pending',
-        }]);
+      onPurchaseExtracted: (purchase, emailId) => {
+        itemCallbacks.onExtracted(purchase, emailId);
       },
 
-      onPurchaseSaved: (emailId: string) => {
-        setPendingItems(prev =>
-          prev.map(item => item.tempId === emailId ? { ...item, status: 'saved' as const } : item)
-        );
+      onPurchaseSaved: (emailId) => {
+        itemCallbacks.onSaved(emailId);
       },
 
-      onPurchaseFailed: (emailId: string) => {
-        setPendingItems(prev =>
-          prev.map(item => item.tempId === emailId ? { ...item, status: 'error' as const } : item)
-        );
+      onPurchaseFailed: (emailId) => {
+        itemCallbacks.onFailed(emailId);
       },
 
       savePurchase: async (purchase: ParsedPurchase, emailId: string) => {
@@ -150,7 +126,7 @@ export const useSync = (userId: string) => {
         error: err instanceof Error ? err.message : 'Sync failed',
       });
     }
-  }, [userId]);
+  }, [userId, itemCallbacks]);
 
-  return { ...syncState, pendingItems, startSync };
+  return { ...syncState, startSync };
 };

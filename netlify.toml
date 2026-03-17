@@ -1,0 +1,10 @@
+[build]
+  base = "/"
+  command = "pnpm build"
+  publish = "apps/client/dist"
+
+# SPA — all routes serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

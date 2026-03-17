@@ -19,3 +19,5 @@ build
 blueprint.txt
 
 supabase/.temp/
+# Local Netlify folder
+.netlify

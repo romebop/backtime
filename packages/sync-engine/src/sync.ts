@@ -77,6 +77,7 @@ export const runSync = async (
           orderNumber: purchase.orderNumber,
         });
         onPurchaseExtracted?.(purchase, email.messageId);
+        await new Promise(r => setTimeout(r, 2000)); // TODO: remove — artificial delay for pending indicator
         try {
           await savePurchase(purchase, email.messageId);
           onPurchaseSaved?.(email.messageId);
