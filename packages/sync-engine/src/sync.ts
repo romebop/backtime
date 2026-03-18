@@ -1,7 +1,7 @@
 // Sync orchestrator — coordinates Gmail fetch + Gemini parsing
 // Runs entirely in the browser
 
-import { fetchAndParseEmails } from './gmail';
+import { fetchAndParseEmails, fetchAndParseMessageIds, getProfileHistoryId, getNewMessageIds } from './gmail';
 import { parseEmailWithGemini, type ParsedPurchase } from './gemini';
 import { buildMerchantQuery, buildIncrementalQuery } from './merchants';
 
@@ -10,10 +10,11 @@ export interface SyncCallbacks {
   getGeminiToken: () => Promise<string>;
   // Save a parsed purchase to the database
   savePurchase: (purchase: ParsedPurchase, emailId: string) => Promise<void>;
-  // Get the last sync timestamp
+  // Get the last sync state (historyId + timestamp)
   getLastSyncedAt: () => Promise<string | null>;
-  // Update the last sync timestamp
   setLastSyncedAt: (timestamp: string) => Promise<void>;
+  getHistoryId: () => Promise<string | null>;
+  setHistoryId: (historyId: string) => Promise<void>;
   // Called when Gemini extracts a purchase (before saving)
   onPurchaseExtracted?: (purchase: ParsedPurchase, emailId: string) => void;
   // Called after a purchase is saved successfully
@@ -28,25 +29,54 @@ export const runSync = async (
   gmailAccessToken: string,
   callbacks: SyncCallbacks,
 ): Promise<{ synced: number; errors: number }> => {
-  const { getGeminiToken, savePurchase, getLastSyncedAt, setLastSyncedAt, onPurchaseExtracted, onPurchaseSaved, onPurchaseFailed, onProgress } = callbacks;
+  const { getGeminiToken, savePurchase, getLastSyncedAt, setLastSyncedAt, getHistoryId, setHistoryId, onPurchaseExtracted, onPurchaseSaved, onPurchaseFailed, onProgress } = callbacks;
 
-  // Build query — incremental if we have a previous sync timestamp
+  // Try incremental sync: historyId → date-based → full scan
+  const savedHistoryId = await getHistoryId();
   const lastSyncedAt = await getLastSyncedAt();
-  let query: string;
-  if (lastSyncedAt) {
-    // Format as YYYY/MM/DD for Gmail's after: operator
+  let emails;
+
+  if (savedHistoryId) {
+    try {
+      console.log('[sync] incremental sync using historyId:', savedHistoryId);
+      const newMessageIds = await getNewMessageIds(gmailAccessToken, savedHistoryId);
+      console.log('[sync] history API returned', newMessageIds.length, 'new messages');
+      emails = await fetchAndParseMessageIds(gmailAccessToken, newMessageIds);
+    } catch (err: any) {
+      // historyId expired (404) or other error — fall back to date-based
+      console.warn('[sync] history API failed:', err.message);
+      if (lastSyncedAt) {
+        const date = new Date(lastSyncedAt);
+        const dateStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+        const query = buildIncrementalQuery(dateStr);
+        console.log('[sync] falling back to date-based query:', query);
+        emails = await fetchAndParseEmails(gmailAccessToken, query);
+      } else {
+        const query = buildMerchantQuery();
+        console.log('[sync] falling back to full scan:', query);
+        emails = await fetchAndParseEmails(gmailAccessToken, query);
+      }
+    }
+  } else if (lastSyncedAt) {
+    // Have a timestamp but no historyId (e.g. migrated from old sync) — date-based
     const date = new Date(lastSyncedAt);
     const dateStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
-    query = buildIncrementalQuery(dateStr);
+    const query = buildIncrementalQuery(dateStr);
+    console.log('[sync] date-based sync:', query);
+    emails = await fetchAndParseEmails(gmailAccessToken, query);
   } else {
-    query = buildMerchantQuery();
+    // First sync — full merchant scan
+    const query = buildMerchantQuery();
+    console.log('[sync] first sync, Gmail query:', query);
+    emails = await fetchAndParseEmails(gmailAccessToken, query);
   }
 
-  // Fetch emails from Gmail (happens in browser)
-  console.log('[sync] Gmail query:', query);
-  const emails = await fetchAndParseEmails(gmailAccessToken, query);
   console.log('[sync] found', emails.length, 'emails to consider:');
   emails.forEach((e, i) => console.log(`  [${i + 1}] From: ${e.from} | Subject: ${e.subject}`));
+
+  // Save current historyId for next incremental sync
+  const currentHistoryId = await getProfileHistoryId(gmailAccessToken);
+  await setHistoryId(currentHistoryId);
 
   if (emails.length === 0) {
     await setLastSyncedAt(new Date().toISOString());

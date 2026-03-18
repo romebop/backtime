@@ -87,6 +87,59 @@ export const parseMessage = (detail: GmailMessageDetail): ParsedEmail => {
   return { messageId: detail.id, from, subject, body, date };
 };
 
+// Get the user's current historyId
+export const getProfileHistoryId = async (accessToken: string): Promise<string> => {
+  const data = await gmailFetch('/profile', accessToken);
+  return data.historyId;
+};
+
+// Get message IDs added since a given historyId
+export const getNewMessageIds = async (
+  accessToken: string,
+  startHistoryId: string,
+): Promise<string[]> => {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      startHistoryId,
+      historyTypes: 'messageAdded',
+      ...(pageToken ? { pageToken } : {}),
+    });
+    const data = await gmailFetch(`/history?${params}`, accessToken);
+    if (data.history) {
+      for (const record of data.history) {
+        if (record.messagesAdded) {
+          for (const added of record.messagesAdded) {
+            ids.push(added.message.id);
+          }
+        }
+      }
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return [...new Set(ids)]; // dedupe
+};
+
+// Fetch and parse specific messages by ID
+export const fetchAndParseMessageIds = async (
+  accessToken: string,
+  messageIds: string[],
+): Promise<ParsedEmail[]> => {
+  const parsed: ParsedEmail[] = [];
+  for (const id of messageIds) {
+    try {
+      const detail = await getMessageDetail(accessToken, id);
+      parsed.push(parseMessage(detail));
+    } catch (err) {
+      console.error(`Failed to parse message ${id}:`, err);
+    }
+  }
+  return parsed;
+};
+
 // Fetch and parse multiple emails
 export const fetchAndParseEmails = async (
   accessToken: string,

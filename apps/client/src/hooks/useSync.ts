@@ -107,6 +107,22 @@ export const useSync = (userId: string, itemCallbacks: ItemCallbacks) => {
         });
       },
 
+      getHistoryId: async () => {
+        const { data } = await supabase
+          .from('sync_state')
+          .select('gmail_history_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+        return data?.gmail_history_id ?? null;
+      },
+
+      setHistoryId: async (historyId: string) => {
+        await supabase.from('sync_state').upsert({
+          user_id: userId,
+          gmail_history_id: historyId,
+        });
+      },
+
       onProgress: (current, total, itemName) => {
         setSyncState(prev => ({
           ...prev,
