@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import styled, { useTheme, keyframes } from 'styled-components';
 import { User } from '@supabase/supabase-js';
 
@@ -96,6 +96,11 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
     if (initial) setIsLoading(false);
   };
 
+  const removeItem = useCallback(async (id: string) => {
+    setDbItems(prev => prev.filter(item => item.id !== id));
+    await supabase.from('items').delete().eq('id', id);
+  }, []);
+
   useEffect(() => {
     fetchItems(true);
     startSync();
@@ -143,6 +148,28 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
     return theme.badge.safe;
   };
 
+  const getDateGroup = (days: number | null): string => {
+    if (days === null) return 'No return deadline';
+    if (days <= 0) return 'Expired';
+    if (days <= 7) return 'This week';
+    if (days <= 30) return 'This month';
+    return 'Later';
+  };
+
+  const groupedItems = useMemo(() => {
+    const groupOrder = ['This week', 'This month', 'Later', 'No return deadline', 'Expired'];
+    const groups: Record<string, DisplayItem[]> = {};
+    for (const item of items) {
+      const days = getDaysRemaining(item.return_by_date);
+      const group = getDateGroup(days);
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(item);
+    }
+    return groupOrder
+      .filter(g => groups[g]?.length)
+      .map(g => ({ label: g, items: groups[g] }));
+  }, [items]);
+
   return (
     <>
       <TopBar>
@@ -183,55 +210,90 @@ const Content: React.FC<ContentProps> = ({ handleLogout, user }) => {
       </StatusBanner>
       {isLoading ? (
         <LoadingDots />
+      ) : items.length === 0 && isSyncing ? (
+        <LoadingDots />
       ) : items.length === 0 ? (
-        <EmptyState>No items yet. Add your first purchase!</EmptyState>
+        <EmptyState>No purchases found. Add your first item!</EmptyState>
       ) : (
-        <GridContainer>
-          {items.map(item => {
-            const daysLeft = getDaysRemaining(item.return_by_date);
-            const badge = getBadgeColor(daysLeft);
-            const syncStatus = item._syncStatus;
-            return (
-              <ItemCard key={item.id} $syncStatus={syncStatus}>
-                <CardTop>
-                  <ItemName>{item.name}</ItemName>
-                  {item.price != null && <Price>${item.price.toFixed(2)}</Price>}
-                </CardTop>
-                {item.merchant && <Merchant>{item.merchant}</Merchant>}
-                <CardBottom>
-                  {daysLeft !== null && (
-                    <Badge $bg={badge.bg} $text={badge.text}>
-                      {daysLeft > 0 ? `${daysLeft}d left to return` : 'Return expired'}
-                    </Badge>
-                  )}
-                  {item.warranty_end_date && (
-                    <WarrantyInfo>
-                      Warranty until {new Date(item.warranty_end_date).toLocaleDateString()}
-                    </WarrantyInfo>
-                  )}
-                </CardBottom>
-                <SyncRow>
-                  {syncStatus === 'pending' ? (
-                    <SyncIndicator $status="pending">
-                      <Spinner viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" /></Spinner>
-                      Saving...
-                    </SyncIndicator>
-                  ) : syncStatus === 'saved' ? (
-                    <SyncIndicator $status="saved">
-                      <SyncIcon viewBox="0 0 16 16"><path d="M3 8.5l3.5 3.5L13 4" /></SyncIcon>
-                      Saved
-                    </SyncIndicator>
-                  ) : syncStatus === 'error' ? (
-                    <SyncIndicator $status="error">
-                      <SyncIcon viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></SyncIcon>
-                      Save failed
-                    </SyncIndicator>
-                  ) : null}
-                </SyncRow>
-              </ItemCard>
-            );
-          })}
-        </GridContainer>
+        <ListContainer>
+          {groupedItems.map(({ label, items: groupItems }) => (
+            <DateGroup key={label}>
+              <DateLabel>{label}</DateLabel>
+              <ItemList>
+                {groupItems.map(item => {
+                  const daysLeft = getDaysRemaining(item.return_by_date);
+                  const badge = getBadgeColor(daysLeft);
+                  const syncStatus = item._syncStatus;
+                  return (
+                    <ItemRow key={item.id} $syncStatus={syncStatus}>
+                      <ItemLeft>
+                        <ItemName>{item.name}</ItemName>
+                        <ItemMeta>
+                          {item.merchant && <Merchant>{item.merchant}</Merchant>}
+                          {item.purchase_date && (
+                            <MetaDot />
+                          )}
+                          {item.purchase_date && (
+                            <PurchaseDate>
+                              Purchased {new Date(item.purchase_date).toLocaleDateString()}
+                            </PurchaseDate>
+                          )}
+                          {item.warranty_end_date && (
+                            <>
+                              <MetaDot />
+                              <WarrantyInfo>
+                                Warranty until {new Date(item.warranty_end_date).toLocaleDateString()}
+                              </WarrantyInfo>
+                            </>
+                          )}
+                        </ItemMeta>
+                      </ItemLeft>
+                      <ItemCenter>
+                        {item.price != null && <Price>${item.price.toFixed(2)}</Price>}
+                        {daysLeft !== null && (
+                          <Badge $bg={badge.bg} $text={badge.text}>
+                            {daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
+                          </Badge>
+                        )}
+                        <SyncSlot>
+                          {syncStatus && (
+                            <SyncIndicator $status={syncStatus}>
+                              {syncStatus === 'pending' ? (
+                                <><Spinner viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" /></Spinner>Saving...</>
+                              ) : syncStatus === 'saved' ? (
+                                <><SyncIcon viewBox="0 0 16 16"><path d="M3 8.5l3.5 3.5L13 4" /></SyncIcon>Saved</>
+                              ) : (
+                                <><SyncIcon viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></SyncIcon>Failed</>
+                              )}
+                            </SyncIndicator>
+                          )}
+                        </SyncSlot>
+                      </ItemCenter>
+                      <ItemActions>
+                        {item.order_number && (
+                          <ActionIcon title="View order" onClick={() => {}}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="16" y1="13" x2="8" y2="13" />
+                              <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                          </ActionIcon>
+                        )}
+                        <ActionIcon title="Remove item" onClick={() => removeItem(item.id)}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </ActionIcon>
+                      </ItemActions>
+                    </ItemRow>
+                  );
+                })}
+              </ItemList>
+            </DateGroup>
+          ))}
+        </ListContainer>
       )}
     </>
   );
@@ -242,7 +304,7 @@ const TopBar = styled.div`
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 1200px;
+  max-width: 720px;
   margin-bottom: 28px;
 `;
 
@@ -299,7 +361,7 @@ const StatusBanner = styled.div<{ $variant: 'syncing' | 'done' | 'error' }>`
   align-items: center;
   gap: 10px;
   width: 100%;
-  max-width: 1200px;
+  max-width: 720px;
   padding: 12px 20px;
   margin-bottom: 20px;
   background: ${({ $variant, theme }) => theme.banner[$variant].bg};
@@ -328,19 +390,41 @@ const StatusDot = styled.div<{ $variant: 'syncing' | 'done' | 'error' }>`
   }
 `;
 
-const GridContainer = styled.div`
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+const ListContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
   width: 100%;
-  max-width: 1200px;
+  max-width: 720px;
 `;
 
-const ItemCard = styled.div<{ $syncStatus?: SyncStatus }>`
+const DateGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 20px;
+`;
+
+const DateLabel = styled.div`
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.textDimmed};
+  padding-bottom: 8px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const ItemList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ItemRow = styled.div<{ $syncStatus?: SyncStatus }>`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
   background: ${({ theme }) => theme.colors.bgElevated};
   border: 1px solid ${({ $syncStatus, theme }) =>
     $syncStatus === 'error' ? theme.banner.error.border : theme.colors.border};
@@ -352,11 +436,12 @@ const ItemCard = styled.div<{ $syncStatus?: SyncStatus }>`
   }
 `;
 
-const CardTop = styled.div`
+const ItemLeft = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
 `;
 
 const ItemName = styled.div`
@@ -364,11 +449,67 @@ const ItemName = styled.div`
   font-weight: 600;
   color: ${({ theme }) => theme.colors.textHeading};
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const ItemMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+`;
+
+const MetaDot = styled.span`
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.textDimmed};
+  flex-shrink: 0;
 `;
 
 const Merchant = styled.div`
-  font-size: 14px;
+  font-size: 13px;
   color: ${({ theme }) => theme.colors.textMuted};
+`;
+
+const PurchaseDate = styled.div`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textDimmed};
+`;
+
+const ItemCenter = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+`;
+
+const ItemActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 4px;
+`;
+
+const ActionIcon = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.textDimmed};
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    background: ${({ theme }) => theme.colors.bgSurface};
+    color: ${({ theme }) => theme.colors.textSecondary};
+  }
 `;
 
 const Price = styled.div`
@@ -378,26 +519,19 @@ const Price = styled.div`
   white-space: nowrap;
 `;
 
-const CardBottom = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-`;
-
 const Badge = styled.div<{ $bg: string; $text: string }>`
   display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: ${({ $text }) => $text};
   background: ${({ $bg }) => $bg};
+  white-space: nowrap;
 `;
 
 const WarrantyInfo = styled.div`
-  font-size: 13px;
+  font-size: 12px;
   color: ${({ theme }) => theme.colors.textDimmed};
 `;
 
@@ -411,8 +545,12 @@ const fadeOut = keyframes`
   100% { opacity: 0; }
 `;
 
-const SyncRow = styled.div`
-  min-height: 18px;
+const SyncSlot = styled.div`
+  width: 80px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 `;
 
 const SyncIndicator = styled.div<{ $status: 'pending' | 'error' | 'saved' }>`
