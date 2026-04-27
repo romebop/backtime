@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { supabase } from '../lib/supabase';
 
-type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark';
 const CACHE_KEY = 'backtime-theme';
 
 export const useThemeMode = (userId: string | null) => {

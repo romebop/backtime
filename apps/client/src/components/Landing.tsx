@@ -1,151 +1,206 @@
 import React from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
+import type { ThemeMode } from '../hooks/useThemeMode';
+import ThemeIcon from './ThemeIcon';
 
 interface LandingProps {
   onSignIn: () => void;
+  mode: ThemeMode;
+  onToggleTheme: () => void;
 }
 
-const Landing: React.FC<LandingProps> = ({ onSignIn }) => {
+const TRUST_POINTS = [
+  'We never see your emails',
+  'Open source',
+];
 
+const delay = (ms: number) => ({ animationDelay: `${ms}ms` });
+
+const CheckMark: React.FC = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const Landing: React.FC<LandingProps> = ({ onSignIn, mode, onToggleTheme }) => {
   return (
-    <Container>
-      <Hero>
-        <Eyebrow>Purchase tracking, automated</Eyebrow>
-        <Title>Never miss a<br />return deadline again</Title>
-        <Subtitle>
-          BackTime connects to your Gmail, extracts purchase details right in your browser, and tracks your return windows with countdown alerts.
-        </Subtitle>
-        <HeroCTA>
-          <GoogleButton onClick={onSignIn}>
-            <GoogleLogo src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" />
-            Continue with Google
-          </GoogleButton>
-          <CTAHint>We'll ask for read-only email access to find your receipts</CTAHint>
-        </HeroCTA>
-      </Hero>
+    <Page>
+      <Nav style={delay(0)}>
+        <Brand>
+          <Logo src="/favicon.svg" alt="" width={22} height={22} />
+          <Wordmark>BackTime</Wordmark>
+        </Brand>
+        <NavLinks>
+          <NavLink href="#how">How it works</NavLink>
+          <NavLink href="#privacy">Privacy</NavLink>
+          <NavLink href="https://github.com/romebop/backtime" target="_blank" rel="noreferrer">Open source</NavLink>
+          <ThemeToggle onClick={onToggleTheme} aria-label="Toggle theme">
+            <ThemeIcon mode={mode} size={16} />
+          </ThemeToggle>
+        </NavLinks>
+      </Nav>
 
-      <Divider />
+      <HeroGrid>
+        <HeroLeft>
+          <Eyebrow style={delay(120)}>
+            <EyebrowDot />
+            Purchase tracking, automated
+          </Eyebrow>
+          <Title style={delay(200)}>
+            Never miss a<br />return deadline<br />again.
+          </Title>
+          <Subtitle style={delay(320)}>
+            BackTime connects to your Gmail, extracts purchase details right in your browser, and tracks return windows with countdown alerts.
+          </Subtitle>
+          <CTAButton onClick={onSignIn} style={delay(440)}>
+            <GoogleG>G</GoogleG>
+            Scan my inbox
+          </CTAButton>
+          <TrustRow style={delay(560)}>
+            {TRUST_POINTS.map(point => (
+              <TrustItem key={point}>
+                <Tick><CheckMark /></Tick>
+                {point}
+              </TrustItem>
+            ))}
+          </TrustRow>
+        </HeroLeft>
 
-      <Steps>
-        <StepsLabel>How it works</StepsLabel>
-        <Pipeline>
-          <PipelineNode $delay={0}>
-            <NodeCircle>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2" />
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-              </svg>
-            </NodeCircle>
-            <NodeText>
-              <StepTitle>Connects to your Gmail</StepTitle>
-              <StepDesc>Scans for order confirmations from merchants like Amazon, Best Buy, Target, and more.</StepDesc>
-            </NodeText>
-          </PipelineNode>
-
-          <Connector $delay={0}>
-            <ConnectorLine />
-            <ConnectorDot />
-          </Connector>
-
-          <PipelineNode $delay={1}>
-            <NodeCircle>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z" />
-                <circle cx="12" cy="15" r="2" />
-              </svg>
-            </NodeCircle>
-            <NodeText>
-              <StepTitle>Extracts purchase details</StepTitle>
-              <StepDesc>Receipts are parsed entirely in your browser — your email content never leaves your device.</StepDesc>
-            </NodeText>
-          </PipelineNode>
-
-          <Connector $delay={1}>
-            <ConnectorLine />
-            <ConnectorDot />
-          </Connector>
-
-          <PipelineNode $delay={2}>
-            <NodeCircle>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </NodeCircle>
-            <NodeText>
-              <StepTitle>Tracks your return windows</StepTitle>
-              <StepDesc>Shows countdown badges for each purchase and alerts you before return deadlines expire.</StepDesc>
-            </NodeText>
-          </PipelineNode>
-        </Pipeline>
-        <PrivacyDetails>
-          <PrivacyItem>
-            <CheckIcon>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </CheckIcon>
-            Your emails never touch our servers — all parsing happens in your browser
-          </PrivacyItem>
-          <PrivacyItem>
-            <CheckIcon>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </CheckIcon>
-            Read-only Gmail access — we can never send, delete, or modify anything
-          </PrivacyItem>
-          <PrivacyItem>
-            <CheckIcon>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </CheckIcon>
-            We only store item name, price, date, and merchant — nothing else
-          </PrivacyItem>
-          <PrivacyItem>
-            <CheckIcon>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </CheckIcon>
-            Fully open source — audit every line of code yourself
-          </PrivacyItem>
-        </PrivacyDetails>
-      </Steps>
-    </Container>
+        <HeroRight style={delay(520)}>
+          <Placeholder>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 16l5-5 4 4 3-3 6 6" />
+              <circle cx="9" cy="9" r="1.5" />
+            </svg>
+            <PlaceholderLabel>Graphic placeholder</PlaceholderLabel>
+            <PlaceholderDesc>Explanatory visual coming soon</PlaceholderDesc>
+          </Placeholder>
+        </HeroRight>
+      </HeroGrid>
+    </Page>
   );
 };
 
-// Animations
 const fadeUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to   { opacity: 1; transform: none;             filter: blur(0);   }
+`;
+
+const fadeIn = css`
+  opacity: 0;
+  will-change: opacity, transform, filter;
+  animation: ${fadeUp} 0.85s cubic-bezier(0.2, 0.7, 0, 1) both;
+
+  @media (prefers-reduced-motion: reduce) {
     opacity: 1;
-    transform: translateY(0);
+    animation: none;
   }
 `;
 
-const drawLine = keyframes`
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-`;
-
-const Container = styled.div`
-  max-width: 680px;
-  width: 100%;
+const Page = styled.div`
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 64px;
-  padding: 64px 24px 80px;
+  background: ${({ theme }) => theme.colors.bgPage};
+  color: ${({ theme }) => theme.colors.textPrimary};
 `;
 
-const Hero = styled.div`
-  text-align: center;
-  animation: ${fadeUp} 0.2s ease-out both;
+const Nav = styled.nav`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 40px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.bgPage};
+  ${fadeIn}
+
+  @media (max-width: 900px) {
+    padding: 18px 20px;
+  }
+`;
+
+const Brand = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Logo = styled.img`
+  display: block;
+`;
+
+const Wordmark = styled.span`
+  font-family: 'Geist', 'Outfit', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: ${({ theme }) => theme.colors.textHeading};
+  letter-spacing: -0.015em;
+`;
+
+const NavLinks = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 28px;
+
+  @media (max-width: 900px) {
+    gap: 12px;
+  }
+`;
+
+const NavLink = styled.a`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  text-decoration: none;
+  font-weight: 400;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+`;
+
+const ThemeToggle = styled.button`
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  padding: 7px;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  display: grid;
+  place-items: center;
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.textPrimary};
+    border-color: ${({ theme }) => theme.colors.borderHover};
+  }
+`;
+
+const HeroGrid = styled.main`
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 80px;
+  padding: 80px 64px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding: 48px 24px;
+  }
+`;
+
+const HeroLeft = styled.div`
+  max-width: 520px;
 `;
 
 const Eyebrow = styled.div`
@@ -154,40 +209,49 @@ const Eyebrow = styled.div`
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.textDimmed};
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  ${fadeIn}
+`;
+
+const EyebrowDot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.colors.accentGreen};
+  display: inline-block;
+  box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.accentGreen}22;
 `;
 
 const Title = styled.h1`
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: clamp(36px, 6vw, 52px);
-  font-weight: 400;
-  margin: 0 0 20px 0;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-family: 'Geist', 'Outfit', system-ui, sans-serif;
+  font-size: clamp(40px, 5vw, 60px);
+  font-weight: 500;
+  margin: 0 0 22px 0;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
   color: ${({ theme }) => theme.colors.textHeading};
+  text-wrap: pretty;
+  ${fadeIn}
 `;
 
 const Subtitle = styled.p`
   font-size: 17px;
-  line-height: 1.6;
+  line-height: 1.55;
   color: ${({ theme }) => theme.colors.textSecondary};
-  margin: 0 auto 36px;
-  max-width: 440px;
+  margin: 0 0 32px;
+  max-width: 460px;
   font-weight: 300;
+  ${fadeIn}
 `;
 
-const HeroCTA = styled.div`
-  display: flex;
-  flex-direction: column;
+const CTAButton = styled.button`
+  display: inline-flex;
   align-items: center;
   gap: 12px;
-`;
-
-const GoogleButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 28px;
+  padding: 14px 26px;
   font-size: 15px;
   font-weight: 500;
   font-family: 'Outfit', sans-serif;
@@ -198,11 +262,12 @@ const GoogleButton = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  ${fadeIn}
 
   &:hover {
     background: ${({ theme }) => theme.colors.btnPrimaryHover};
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10), 0 8px 24px rgba(0, 0, 0, 0.06);
   }
 
   &:active {
@@ -210,185 +275,87 @@ const GoogleButton = styled.button`
   }
 `;
 
-const GoogleLogo = styled.img`
+const GoogleG = styled.span`
   width: 20px;
   height: 20px;
-  filter: brightness(0) invert(1);
+  border-radius: 50%;
+  background: #ffffff;
+  color: #18181b;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
 `;
 
-const CTAHint = styled.p`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDimmed};
-  margin: 0;
-`;
-
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.colors.border};
-  animation: ${drawLine} 0.25s ease-out 0.125s both;
-  transform-origin: left;
-`;
-
-const Steps = styled.div`
+const TrustRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 28px;
+  align-items: center;
+  gap: 18px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  flex-wrap: wrap;
+  ${fadeIn}
 `;
 
-const StepsLabel = styled.div`
+const TrustItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
-  font-weight: 500;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-weight: 400;
+`;
+
+const Tick = styled.span`
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: ${({ theme }) => theme.colors.accentGreen}22;
+  color: ${({ theme }) => theme.colors.accentGreen};
+`;
+
+const HeroRight = styled.div`
+  ${fadeIn}
+
+  @media (max-width: 900px) {
+    order: -1;
+  }
+`;
+
+const Placeholder = styled.div`
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+  aspect-ratio: 1 / 1;
+  background: ${({ theme }) => theme.colors.bgElevated};
+  border: 1px dashed ${({ theme }) => theme.colors.borderHover};
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  color: ${({ theme }) => theme.colors.textDimmed};
+
+  @media (max-width: 900px) {
+    margin: 0 auto;
+  }
+`;
+
+const PlaceholderLabel = styled.div`
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.textDimmed};
-  text-align: center;
 `;
 
-const travelDot = keyframes`
-  0% { left: -6px; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { left: calc(100% - 2px); opacity: 0; }
-`;
-
-const Pipeline = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 0;
-
-  @media (max-width: 580px) {
-    flex-direction: column;
-    align-items: center;
-  }
-`;
-
-const PipelineNode = styled.div<{ $delay: number }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  width: 160px;
-  flex-shrink: 0;
-  text-align: center;
-  animation: ${fadeUp} 0.2s ease-out 0.15s both;
-`;
-
-const NodeCircle = styled.div`
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: ${({ theme }) => theme.colors.bgSurface};
-  border: 2px solid ${({ theme }) => theme.colors.border};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-
-  ${PipelineNode}:hover & {
-    border-color: ${({ theme }) => theme.colors.textDimmed};
-    box-shadow: 0 0 0 4px ${({ theme }) => theme.colors.border};
-  }
-`;
-
-const NodeText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 8px;
-`;
-
-const Connector = styled.div<{ $delay: number }>`
-  position: relative;
-  height: 2px;
-  flex: 1;
-  margin-top: 28px;
-  margin-left: -36px;
-  margin-right: -36px;
-  z-index: 0;
-  animation: ${fadeUp} 0.2s ease-out 0.15s both;
-
-  @media (max-width: 580px) {
-    width: 2px;
-    height: 32px;
-    flex: none;
-    margin: 0;
-  }
-`;
-
-const ConnectorLine = styled.div`
-  position: absolute;
-  inset: 0;
-  background: ${({ theme }) => theme.colors.border};
-  border-radius: 1px;
-
-  @media (max-width: 580px) {
-    width: 2px;
-    height: 100%;
-  }
-`;
-
-const ConnectorDot = styled.div`
-  position: absolute;
-  top: -2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: ${({ theme }) => theme.colors.textDimmed};
-  animation: ${travelDot} 1.6s ease-in-out infinite;
-  animation-delay: 0.6s;
-
-  @media (max-width: 580px) {
-    top: auto;
-    left: -2px !important;
-    animation: none;
-  }
-`;
-
-const StepTitle = styled.div`
-  font-weight: 600;
-  font-size: 15px;
-  color: ${({ theme }) => theme.colors.textPrimary};
-  line-height: 1.3;
-`;
-
-const StepDesc = styled.div`
+const PlaceholderDesc = styled.div`
   font-size: 13px;
-  line-height: 1.55;
   color: ${({ theme }) => theme.colors.textMuted};
   font-weight: 300;
-`;
-
-const PrivacyDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 4px;
-  animation: ${fadeUp} 0.175s ease-out 0.275s both;
-`;
-
-const PrivacyItem = styled.div`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 300;
-`;
-
-const CheckIcon = styled.span`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: ${({ theme }) => theme.colors.accentGreen}18;
-  color: ${({ theme }) => theme.colors.accentGreen};
-  flex-shrink: 0;
 `;
 
 export default Landing;
